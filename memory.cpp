@@ -1,0 +1,4 @@
+namespace gbemu{
+	class GBMem{
+	};	
+}
