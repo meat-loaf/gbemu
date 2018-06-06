@@ -4,8 +4,9 @@
 #define _GBCPU_H_ 1
 
 namespace gbemu{
+#define _bc ((_b << 8) + _c)
+#define _de ((_d << 8) + _e)
 #define _hl ((_h << 8) + _l)
-
 class GBCPU{
 public:
 	GBCPU();
@@ -48,9 +49,16 @@ private:
 		_a = zf = res & 0xFF;
 		nf = 0;
 	}
+	inline void reg_write_a(unsigned char& high, unsigned char& low){
+		mem[(high << 8) + low] = _a;
+	}
 	inline void reg_and(unsigned char& reg){
 	}
-	
+	inline void reg_load_u16(unsigned char& high, unsigned char &low, 
+			unsigned char &mhigh, unsigned char &mlow){
+		high = mhigh;
+		low = mlow;
+	}	
 	inline void reg_load(unsigned char& dest, unsigned char &val){
 		dest = val;
 	}

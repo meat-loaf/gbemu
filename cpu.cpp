@@ -1,14 +1,20 @@
 #include "cpu.hpp"
-
 namespace gbemu{
 void GBCPU::execute(){
-	//TODO FETCH_OP should automatically increased ticks by 4,
-	//adjustmets made in opcodes that are a multiple of 4
 	unsigned char opcode = mem[_pc];
 	_pc++; ticks+=4;
 	switch(opcode){
 		//NOP
 		case 0x0:
+			break;
+		case 0x01:
+			reg_load_u16(_b, _c, mem[_pc], mem[_pc+1])
+			_pc+=2;
+			ticks+=8;
+			break;
+		case 0x02:
+			reg_write_a(_b, _c);
+			ticks+=4;
 			break;
 		case 0x03:
 			inc_u16(_b, _c);
@@ -20,6 +26,19 @@ void GBCPU::execute(){
 		case 0x05:
 			dec_u8(_b);
 			break;
+		case 0x06:
+			reg_load(_b, mem[_pc]);
+			pc+=1;
+			ticks+=4;
+		//TODO RLCA
+		case 0x07:
+			break;
+		//TODO LD (a16), SP
+		case 0x08:
+			break;
+		//TODO ADD HL, BC
+		case 0x09:
+			break;	
 		case 0x0B:
 			dec_u16(_b, _c);
 			ticks+=4;
@@ -30,6 +49,27 @@ void GBCPU::execute(){
 		case 0x0D:
 			dec_u8(_c);
 			break;
+		case 0x0E:
+			reg_load(_c, mem[pc];
+			_pc+=1;
+			ticks+=4;
+		case 0x0F:
+			//RRCA
+			break;
+		case 0x10:
+			//STOP
+			//stop is encoded 0x10 0x00 for some reason
+			_pc+=1;
+			break;
+		case 0x11:
+			reg_load_u16(_d, _e, mem[pc], mem[_pc+1];
+			_pc+=2;
+			ticks+=8;
+			break;
+		case 0x12:
+			reg_write_a(_d, _e);
+			ticks +=4;
+			break;	
 		case 0x13:
 			inc_u16(_d, _e);
 			ticks+=4;
@@ -50,6 +90,27 @@ void GBCPU::execute(){
 		case 0x1D:
 			dec_u8(_e);
 			break;
+		case 0x1E:
+			reg_load_u8(_e, mem[_pc]);
+			_pc+=1;
+			ticks+=4;
+			break;
+		//TODO RRA
+		case 0x1F:
+			break;
+		case 0x20:
+			_pc += (!!nz) ? reinterpret_cast<signed char>(mem[_pc]) : 1;
+			break;
+		case 0x21:
+			reg_load_u16(_h, _l, mem[pc], mem[_pc+1]);
+			_pc+2;
+			ticks+=8;
+			break;
+		case 0x22:
+			reg_write_a(_h, _l);
+			inc_u16(_h, _l);
+			ticks+=4;
+			break;
 		case 0x23:
 			inc_u16(_h, _l);
 			ticks+=4;
@@ -60,6 +121,14 @@ void GBCPU::execute(){
 		case 0x25:
 			dec_u8(_h);	
 			break;
+		case 0x26:
+			reg_load(_h, mem[_pc]);
+			pc+=1;
+			ticks+=4;
+			break;
+		//TODO DAA
+		case 0x27:
+			break;
 		case 0x2B:
 			dec_u16(_h, _l);
 			ticks+=4;
@@ -69,6 +138,9 @@ void GBCPU::execute(){
 			break;
 		case 0x2D:
 			dec_u8(_l);
+			break;
+		case 0x31:
+			//load pc, pc+1 into sp
 			break;
 		case 0x33:
 			_sp = _sp+1 & 0xFFFF;
