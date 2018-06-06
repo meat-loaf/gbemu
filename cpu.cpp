@@ -38,7 +38,11 @@ void GBCPU::execute(){
 			break;
 		//TODO ADD HL, BC
 		case 0x09:
-			break;	
+			break;
+		case 0x0A:
+			reg_load(_a, mem[_bc]);
+			ticks+=4;
+			break;
 		case 0x0B:
 			dec_u16(_b, _c);
 			ticks+=4;
@@ -80,6 +84,24 @@ void GBCPU::execute(){
 		case 0x15:
 			dec_u8(_d);	
 			break;
+		case 0x16:
+			reg_load(_d, mem[_pc]);
+			pc+=1;
+			ticks+=4;
+		//TODO RLA
+		case 0x17:
+			break;
+		case 0x18:
+			_pc += static_cast<signed char>(mem[_pc]);
+			ticks+=8;
+			break;
+		//TODO ADD HL, DE
+		case 0x19:
+			reg_load(_a, mem[_de]);
+			ticks+=4;
+			break;
+		case 0x1A:
+			break;
 		case 0x1B:
 			dec_u16(_d, _e);
 			ticks+=4;
@@ -99,7 +121,11 @@ void GBCPU::execute(){
 		case 0x1F:
 			break;
 		case 0x20:
-			_pc += (!!nz) ? reinterpret_cast<signed char>(mem[_pc]) : 1;
+			//TODO efficiency
+			_pc += (!!nz) ? 
+				static_cast<signed char>(mem[_pc]); 
+				: 1;
+			ticks += (!!nz) ? 8 : 4;
 			break;
 		case 0x21:
 			reg_load_u16(_h, _l, mem[pc], mem[_pc+1]);
@@ -129,6 +155,16 @@ void GBCPU::execute(){
 		//TODO DAA
 		case 0x27:
 			break;
+		case 0x28:
+			break;
+		//TODO ADD HL, HL
+		case 0x29:
+			break;
+		case 0x2A:
+			reg_load(_a, mem[_hl]);
+			inc_u16(_h, _l);
+			ticks+=4;
+			break;
 		case 0x2B:
 			dec_u16(_h, _l);
 			ticks+=4;
@@ -139,16 +175,43 @@ void GBCPU::execute(){
 		case 0x2D:
 			dec_u8(_l);
 			break;
+		case 0x2E:
+			reg_load(_l, mem[_pc]);
+			_pc+=1;
+			ticks+=4;
+			break;
+		//TODO CPL
+		case 0x2F:
+			break;
+		//TODO JR NC, r8
+		case 0x30:
+			break;
+		//TODO LD SP, d16
 		case 0x31:
-			//load pc, pc+1 into sp
+			break;
+		case 0x32:
+			reg_load(mem[_hl], _a);
+			inc_u16(_h, _l);
 			break;
 		case 0x33:
 			_sp = _sp+1 & 0xFFFF;
 			ticks+=4;
 			break;
 		case 0x34:
+			inc_u8(mem[_hl]);
+			ticks+=8;
+			break;
 		case 0x35:
-			//inc/dec by (HL)
+			dec_u8(mem[_hl]);
+			ticks+=8;
+			break;
+		case 0x36:
+			reg_load(mem[_hl], mem[_pc]);
+			_pc+=1;
+			ticks+=8;
+			break;
+		//TODO SCF
+		case 0x37:
 			break;
 		case 0x3B:
 			_sp = _sp-1 & 0xFFFF;
@@ -334,8 +397,8 @@ void GBCPU::execute(){
 			reg_load(mem[_hl], _l);
 			ticks+=4;
 			break;
+		//TODO HALT
 		case 0x76:
-			//halt
 			break;
 		case 0x77:
 			reg_load(mem[_hl], _a);

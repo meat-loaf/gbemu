@@ -21,6 +21,7 @@ private:
 
 	//flags aren't effected on 16-bit opcodes...
 	//stack var used incase low reg overflows
+	//TODO check validity
 	inline void inc_u16(unsigned char& high, unsigned char& low){
 		unsigned short li = low;
 		low = ((li + 1) & 0xFF);
