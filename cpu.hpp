@@ -37,10 +37,24 @@ private:
 		reg = zf = reg+1;
 		nf = 0;
 	}
+	inline void inc_u8_mem(unsigned short dest){
+		unsigned char b = mem.read(dest);
+		hf = ((b & 0x10) == 0x10);
+		zf = reg+1;
+		nf = 0;
+		mem.write(dest, zf & 0xFF)
+	}
 	inline void dec_u8(unsigned char &reg){
 		hf = ((reg & 0x10) == 0x10);
 		reg = zf = reg-1;
 		nf = 1;
+	}
+	inline void dec_u8_mem(unsigned char &dest){
+		unsigned char b = mem.read(dest);
+		hf = ((reg & 0x10) == 0x10);
+		zf = reg-1;
+		nf = 1;
+		mem.write(dest, zf & 0xFF);
 	}
 	inline void reg_a_add_u8(unsigned char& reg, bool carry){
 		unsigned short res;

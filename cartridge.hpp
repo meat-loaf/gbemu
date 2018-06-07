@@ -4,9 +4,16 @@
 namespace gbemu{
 class GBCART{
 public:
+	GBCART();	
 	change_bank(unsigned int bank);
 private:
-	unsigned int bank;	
+	typedef struct {
+		unsigned char *bank_0;
+		unsigned char *active_bank;
+	}
+	//will be an inherited class that implements the proper mmu 
+	MMU_BASE mmu;
+	
 };
 }
 #endif

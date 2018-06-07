@@ -4,15 +4,28 @@
 namespace gbemu{
 class GBMEM{
 public:
-	//TODO implement
-	unsigned char& operator[](unsigned short byte){ return _memblob[byte]; }
+
+	unsigned char &read(unsigned char addr);
+	void write(unsigned char addr, unsigned char byte);
 	GBMEM();
 	~GBMEM();
-	unsigned char read(unsigned char addr);
-	unsigned char write(unsigned char addr, unsigned char byte);
+	//TODO check if this is needed
+
 private:
+	struct memblob {
+		unsigned char *chram,
+		unsigned char *bg1_ram,
+		unsigned char *bg2_ram,
+		unsigned char *internal_ram,
+		unsigned char *oam,
+		unsigned char *hw_io,
+		unsigned char *zero_ief
+	} memblob;
 	GBCART cartridge;
-	unsigned char *_memblob;
-};	
+	struct memblob _memblob;
+};
+
+class memabst_internal : public memabst{
+};
 }
 #endif

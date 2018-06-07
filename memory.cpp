@@ -1,11 +1,26 @@
 #include "memory.hpp"
 
 namespace gbemu{
-	GBMEM::GBMEM() : _memblob(nullptr){ } 
+	//TODO can this be accomplished by allocing
+	//all memory at once and casting the struct over it?
+	GBMEM::GBMEM() : _memblob({
+				new unsigned char[0x1800],
+				new unsigned char[0x500],
+				new unsigned char[0x500],
+				new unsigned char[0x1800],
+				new unsigned char[0x2000],
+				new unsigned char[0xA0],
+				new unsigned char[0x80],
+				new unsigned char[0x80]
+				}){ } 
 	GBMEM::~GBMEM() {
-		if (_memblob != nullptr){
-			delete[] _memblob;
-		}
+		delete[] _memblob.chram;
+		delete[] _memblob.bg1_ram;
+		delete[] _memblob.bg2_ram;
+		delete[] _memblob.internal_ram;
+		delete[] _memblob.oam;
+		delete[] _memblob.hw_io;
+		delete[] _memblob.zero_ief;
 	}
 
 	// memory map is as follows:
@@ -26,23 +41,34 @@ namespace gbemu{
 	// $0100-$014F	cart header 
 	// $0000-$00FF 	interrupt vector table	
 	unsigned char GBMEM::read(unsigned char addr){
+		//read from cartridge
 		if (addr < 0x8000){
-			if (addr < 0x0100){
-				//interrupt vector area
-			}
-			//access cartridge here; it should keep track of bank etc
+			cartridge.read(addr);
 		}
+		//chram, bgdata here...
+		//TODO double check timing? i think bgdata can only be
+		//written during h/vblank
 		else if (addr < 0xA000){
-			//chram, bgdata here...
+			;	
 		}
-		else if (addr > 0xBFFF){
-			//internal ram/echo ram/oam, the works
-			if (addr > 0xDFFF && addr < 0xFE00){
-				//load from 0xC000 - 0xDDFF
-			}
+		else if (addr > 0xBFFF && addr < 0xFE00){
+			//if we're accessing from echo ram, access same area
+			//in normal ram instead
+			//TODO can we do adjustments by operator override in struct?
+			//TODO ram from 0xD000-0xDFFF is bankable in cgb, support this eventually
+			return addr > 0xDFFF ?
+				//adjust addresses by 0xC000 as internal ram arr is 0-base
+				//if we're in echo ram adjust by a further 0x2000 
+				_memblob.internal_ram[addr - (0xC000+0x2000)];
+				: _memblob.internal_ram[addr - 0xC000];
 		}
+		//OAM/internal registers
+		//need to check OAM writes; can only be written during v/hblank i think
+		else if (addr > 0xFDFF){
+			;	
+		}
+		//cart ram, if applicable	
 		else{
-			//cart ram, if applicable
 		}
 	}
 }
