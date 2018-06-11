@@ -9,9 +9,7 @@ namespace gbemu{
 				new unsigned char[0x500],
 				new unsigned char[0x1800],
 				new unsigned char[0x2000],
-				new unsigned char[0xA0],
-				new unsigned char[0x80],
-				new unsigned char[0x80]
+				new unsigned char[0xA0+0x80+0x80],
 				}){ } 
 	GBMEM::~GBMEM() {
 		delete[] _memblob.chram;
@@ -19,11 +17,9 @@ namespace gbemu{
 		delete[] _memblob.bg2_ram;
 		delete[] _memblob.internal_ram;
 		delete[] _memblob.oam;
-		delete[] _memblob.hw_io;
-		delete[] _memblob.zero_ief;
 	}
 
-	// memory map is as follows:
+	// memory map is as follows, top down:
 	// $FFFF	interrupt enable flag 
 	// $FF80-$FFFE	zero
 	// $FF00-$FF7F	hardware registers	
@@ -39,17 +35,22 @@ namespace gbemu{
 	// $4000-$7FFF 	cart rom, active bank
 	// $0150-$3FFF 	cart rom, bank 0
 	// $0100-$014F	cart header 
-	// $0000-$00FF 	interrupt vector table	
-	unsigned char GBMEM::read(unsigned char addr){
+	// $0000-$00FF 	interrupt vector table (first 255 bytes of cart)
+	unsigned char &GBMEM::read(unsigned char addr){
 		//read from cartridge
 		if (addr < 0x8000){
 			cartridge.read(addr);
 		}
 		//chram, bgdata here...
 		//TODO double check timing? i think bgdata can only be
-		//written during h/vblank
+		//written/read during h/vblank?
 		else if (addr < 0xA000){
-			;	
+			return addr > 0x97FF ?
+				(addr > 0x9BFF ?
+				 memblob.bg2_ram[addr-0x9800]
+				: memblob.bg1_ram[addr-0x9C00]
+				)
+				: chram[addr-0x9800] 
 		}
 		else if (addr > 0xBFFF && addr < 0xFE00){
 			//if we're accessing from echo ram, access same area
@@ -65,10 +66,46 @@ namespace gbemu{
 		//OAM/internal registers
 		//need to check OAM writes; can only be written during v/hblank i think
 		else if (addr > 0xFDFF){
-			;	
+			return _memblob.oam_hwip_zeroief[addr-0xFDFF];
 		}
 		//cart ram, if applicable	
 		else{
 		}
+	}
+	void GBMEM::write(unsigned short addr, unsigned char byte){
+		//write == perform a bank switch
+		if (addr < 0x8000){
+			cartridge.write(addr);
+		}
+		//write chdata
+		else if (addr < 0xA000){
+			    (addr > 0x97FF ?
+				(addr > 0x9BFF ?
+				 memblob.bg2_ram[addr-0x9800]
+				: memblob.bg1_ram[addr-0x9C00]
+				)
+				: chram[addr-0x9800]) = byte;
+		}
+		//write to internal ram; writing to echo ram is
+		//the same as writing to normal ram in practice, so we redirect
+		else if (addr > 0xBFFF && addr < 0xFE00){
+			(addr > 0xDFFF ?
+				//adjust addresses by 0xC000 as internal ram arr is 0-base
+				//if we're in echo ram adjust by a further 0x2000 
+				_memblob.internal_ram[addr - (0xC000+0x2000)]
+				: _memblob.internal_ram[addr - 0xC000]) = byte
+		}
+		//OAM/internal registers
+		//need to check OAM writes; can only be written during v/hblank i think
+		//TODO restrictions on writing some registers, need to abstract the write
+		else if (addr > 0xFDFF){
+			_memblob.oam_hwio_zeroief[addr-0xFDFF];
+		}
+		//cart ram, if applicable
+		//TODO implement in cartridge class
+		else{
+			;
+		}
+	
 	}
 }

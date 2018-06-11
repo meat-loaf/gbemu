@@ -1,4 +1,4 @@
-#include "cpu.hpp"
+include "cpu.hpp"
 namespace gbemu{
 void GBCPU::execute(){
 	unsigned char opcode = mem.read(_pc);
@@ -13,7 +13,7 @@ void GBCPU::execute(){
 			ticks+=8;
 			break;
 		case 0x02:
-			reg_write_a(_b, _c);
+			write_a_to_mem(_b, _c);
 			ticks+=4;
 			break;
 		case 0x03:
@@ -30,11 +30,13 @@ void GBCPU::execute(){
 			reg_load(_b, mem.read(_pc));
 			pc+=1;
 			ticks+=4;
-		//TODO RLCA
 		case 0x07:
+			rlca();
 			break;
-		//TODO LD (a16), SP
 		case 0x08:
+			write_sp(mem.read(pc) << 8 | mem.read(pc+1));
+			ticks+=16;
+			
 			break;
 		//TODO ADD HL, BC
 		case 0x09:

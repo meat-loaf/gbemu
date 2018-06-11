@@ -64,8 +64,22 @@ private:
 		_a = zf = res & 0xFF;
 		nf = 0;
 	}
-	inline void reg_write_a(unsigned char& high, unsigned char& low){
-		mem[(high << 8) + low] = _a;
+	inline void write_a_to_mem(unsigned char &high, unsigned char &low){
+		mem.write((high & 0xFF) << 8 | (low & 0xFF), _a)
+	}
+	//these operate slightly differently than their CB-prefixed bretheren
+	inline void rlca(){
+		cf = _a << 1;
+		_a = (cf | cf >> 8) & 0xFF;
+		zf = hf = nf = 0;
+	}
+	inline void rrca(){
+		cf = a & 0x1;
+		_a = (_a >> 1) | (cf << 8);
+		zf = hf = nf = 0;
+	}
+	inline void write_sp(unsigned short sp_n){
+		_sp = sp_n;
 	}
 	inline void reg_and(unsigned char& reg){
 	}
@@ -92,6 +106,20 @@ private:
 	inline void reset(unsigned char& mask, unsigned char &reg){
 		reg &= mask;
 	}
+	inline void rlc(unsigned char& reg){
+		cf = reg << 1;
+		reg = cf & 0xFF;
+		cf = cf &= 0x100;
+		zf = reg;
+		hf = nf = 0;
+	}
+	inline void rl(unsigned char& reg){
+		cf = (reg << 1) | !!cf;
+		zf = reg = cf & 0xFF;
+		cf = cf & 0x100;
+		hf = nf = 0;
+	}
+
 };
 	
 }

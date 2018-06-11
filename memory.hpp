@@ -5,8 +5,8 @@ namespace gbemu{
 class GBMEM{
 public:
 
-	unsigned char &read(unsigned char addr);
-	void write(unsigned char addr, unsigned char byte);
+	unsigned char &read(unsigned short addr);
+	void write(unsigned short addr, unsigned char byte);
 	GBMEM();
 	~GBMEM();
 	//TODO check if this is needed
