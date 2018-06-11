@@ -1,6 +1,5 @@
 #ifndef _MMU_H_
 #define _MMU_H_ 1
-#include <iostream>
 namespace gbemu{
 class MMU_BASE{
 public:

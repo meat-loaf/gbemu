@@ -17,9 +17,7 @@ private:
 		unsigned char *bg1_ram,
 		unsigned char *bg2_ram,
 		unsigned char *internal_ram,
-		unsigned char *oam,
-		unsigned char *hw_io,
-		unsigned char *zero_ief
+		unsigned char *oam_hwio_zeroief,
 	} memblob;
 	GBCART cartridge;
 	struct memblob _memblob;

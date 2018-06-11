@@ -6,7 +6,7 @@ namespace gbemu{
 		cart_file.open(fname, std::ifstream::binary);
 		if(cart_file.is_open()){
 			cart_file.seekp(0x0148);
-			unsigned int size = cart_file.read(reinterpret_cast<char*>(&size), 1);
+			unsigned int size = cart_file.read(size, 1);
 			cart_file.seekp(0x0);
 			unsigned char * d = new unsigned char[size];
 			cart_file.read(static_cast<char>(d), size);
