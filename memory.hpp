@@ -13,17 +13,15 @@ public:
 
 private:
 	struct memblob {
-		unsigned char *chram,
-		unsigned char *bg1_ram,
-		unsigned char *bg2_ram,
-		unsigned char *internal_ram,
-		unsigned char *oam_hwio_zeroief,
+		unsigned char *chram;
+		unsigned char *bg1_ram;
+		unsigned char *bg2_ram;
+		unsigned char *internal_ram;
+		unsigned char *oam_hwio_zeroief;
 	} memblob;
 	GBCART cartridge;
 	struct memblob _memblob;
 };
 
-class memabst_internal : public memabst{
-};
 }
 #endif

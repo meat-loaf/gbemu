@@ -40,9 +40,9 @@ private:
 	inline void inc_u8_mem(unsigned short dest){
 		unsigned char b = mem.read(dest);
 		hf = ((b & 0x10) == 0x10);
-		zf = reg+1;
+		zf = b+1;
 		nf = 0;
-		mem.write(dest, zf & 0xFF)
+		mem.write(dest, zf & 0xFF);
 	}
 	inline void dec_u8(unsigned char &reg){
 		hf = ((reg & 0x10) == 0x10);
@@ -51,8 +51,8 @@ private:
 	}
 	inline void dec_u8_mem(unsigned char &dest){
 		unsigned char b = mem.read(dest);
-		hf = ((reg & 0x10) == 0x10);
-		zf = reg-1;
+		hf = ((b & 0x10) == 0x10);
+		zf = b-1;
 		nf = 1;
 		mem.write(dest, zf & 0xFF);
 	}
@@ -65,7 +65,7 @@ private:
 		nf = 0;
 	}
 	inline void write_a_to_mem(unsigned char &high, unsigned char &low){
-		mem.write((high & 0xFF) << 8 | (low & 0xFF), _a)
+		mem.write((high & 0xFF) << 8 | (low & 0xFF), _a);
 	}
 	//these operate slightly differently than their CB-prefixed bretheren
 	inline void rlca(){
@@ -74,7 +74,7 @@ private:
 		zf = hf = nf = 0;
 	}
 	inline void rrca(){
-		cf = a & 0x1;
+		cf = _a & 0x1;
 		_a = (_a >> 1) | (cf << 8);
 		zf = hf = nf = 0;
 	}
@@ -100,10 +100,10 @@ private:
 		nf = hf = cf = 0x0;
 		zf = reg;
 	}
-	inline void set(unsigned char& mask, unsigned char &reg){
+	inline void set(unsigned char mask, unsigned char &reg){
 		reg |= mask;
 	}
-	inline void reset(unsigned char& mask, unsigned char &reg){
+	inline void reset(unsigned char mask, unsigned char &reg){
 		reg &= mask;
 	}
 	inline void rlc(unsigned char& reg){

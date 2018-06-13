@@ -1,4 +1,4 @@
-include "cpu.hpp"
+#include "cpu.hpp"
 namespace gbemu{
 void GBCPU::execute(){
 	unsigned char opcode = mem.read(_pc);
@@ -8,7 +8,7 @@ void GBCPU::execute(){
 		case 0x0:
 			break;
 		case 0x01:
-			reg_load_u16(_b, _c, mem.read(_pc), mem.read(_pc+1))
+			reg_load_u16(_b, _c, mem.read(_pc), mem.read(_pc+1));
 			_pc+=2;
 			ticks+=8;
 			break;
@@ -28,13 +28,13 @@ void GBCPU::execute(){
 			break;
 		case 0x06:
 			reg_load(_b, mem.read(_pc));
-			pc+=1;
+			_pc+=1;
 			ticks+=4;
 		case 0x07:
 			rlca();
 			break;
 		case 0x08:
-			write_sp(mem.read(pc) << 8 | mem.read(pc+1));
+			write_sp(mem.read(_pc) << 8 | mem.read(_pc+1));
 			ticks+=16;
 			
 			break;
@@ -56,7 +56,7 @@ void GBCPU::execute(){
 			dec_u8(_c);
 			break;
 		case 0x0E:
-			reg_load(_c, mem.read(pc);
+			reg_load(_c, mem.read(_pc));
 			_pc+=1;
 			ticks+=4;
 		case 0x0F:
@@ -68,12 +68,12 @@ void GBCPU::execute(){
 			_pc+=1;
 			break;
 		case 0x11:
-			reg_load_u16(_d, _e, mem.read(pc), mem.read(_pc+1);
+			reg_load_u16(_d, _e, mem.read(_pc), mem.read(_pc+1));
 			_pc+=2;
 			ticks+=8;
 			break;
 		case 0x12:
-			reg_write_a(_d, _e);
+			write_a_to_mem(_d, _e);
 			ticks +=4;
 			break;	
 		case 0x13:
@@ -88,7 +88,7 @@ void GBCPU::execute(){
 			break;
 		case 0x16:
 			reg_load(_d, mem.read(_pc));
-			pc+=1;
+			_pc+=1;
 			ticks+=4;
 		//TODO RLA
 		case 0x17:
@@ -115,7 +115,7 @@ void GBCPU::execute(){
 			dec_u8(_e);
 			break;
 		case 0x1E:
-			reg_load_u8(_e, mem.read(_pc));
+			reg_load(_e, mem.read(_pc));
 			_pc+=1;
 			ticks+=4;
 			break;
@@ -123,19 +123,19 @@ void GBCPU::execute(){
 		case 0x1F:
 			break;
 		case 0x20:
-			//TODO efficiency
-			_pc += (!!nz) ? 
-				static_cast<signed char>(mem.read(_pc)); 
+			//note we store complement of zero flag, will be 0 if set
+			_pc += (!zf) ? 
+				static_cast<signed char>(mem.read(_pc)) 
 				: 1;
-			ticks += (!!nz) ? 8 : 4;
+			ticks += (!zf) ? 8 : 4;
 			break;
 		case 0x21:
-			reg_load_u16(_h, _l, mem.read(pc), mem.read(_pc+1));
-			_pc+2;
+			reg_load_u16(_h, _l, mem.read(_pc), mem.read(_pc+1));
+			_pc+=2;
 			ticks+=8;
 			break;
 		case 0x22:
-			reg_write_a(_h, _l);
+			write_a_to_mem(_h, _l);
 			inc_u16(_h, _l);
 			ticks+=4;
 			break;
@@ -151,7 +151,7 @@ void GBCPU::execute(){
 			break;
 		case 0x26:
 			reg_load(_h, mem.read(_pc));
-			pc+=1;
+			_pc+=1;
 			ticks+=4;
 			break;
 		//TODO DAA
@@ -204,8 +204,8 @@ void GBCPU::execute(){
 			ticks+=8;
 			break;
 		case 0x35:
-			dec_u8_mem(_hl);
-			ticks+=8;
+/*			dec_u8_mem(_hl);
+			ticks+=8;*/
 			break;
 		case 0x36:
 			//TODO fix?
@@ -458,9 +458,9 @@ void GBCPU::execute(){
 			break;
 		case 0x86:
 			//TODO fix
-			reg_a_add_u8(mem[_hl], false);
+/*			reg_a_add_u8(mem[_hl], false);
 			ticks+=4;
-			break;
+			break;*/
 		case 0xCB:
 		{
 			unsigned char opcode_2 = mem.read(_pc);
@@ -486,7 +486,7 @@ void GBCPU::execute(){
 					break;
 				case 0x36:
 					//TODO fix
-					swap(mem[_hl]);
+				//	swap(mem[_hl]);
 					ticks+=8;
 					break;
 				case 0x37:
@@ -512,7 +512,7 @@ void GBCPU::execute(){
 					break;
 				case 0x86:
 					//TODO FIX
-					reset(0xFE, mem[_hl]);
+					reset(0xFE, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0x87:
@@ -538,7 +538,7 @@ void GBCPU::execute(){
 					break;
 				case 0x8E:
 					//TODO FIX
-					reset(0xFD, mem[_hl]);
+					reset(0xFD, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0x8F:
@@ -564,7 +564,7 @@ void GBCPU::execute(){
 					break;
 				case 0x96:
 					//TODO FIX
-					reset(0xFB, mem[_hl]);
+					reset(0xFB, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0x97:
@@ -590,7 +590,7 @@ void GBCPU::execute(){
 					break;
 				case 0x9E:
 					//TODO FIX
-					reset(0xF7, mem[_hl]);
+					reset(0xF7, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0x9F:
@@ -615,7 +615,7 @@ void GBCPU::execute(){
 					reset(0xEF, _l);
 					break;
 				case 0xA6:
-					reset(0xEF, mem[_hl]);
+					reset(0xEF, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0xA7:
@@ -640,7 +640,7 @@ void GBCPU::execute(){
 					reset(0xDF, _l);
 					break;
 				case 0xAE:
-					reset(0xDF, _mem[_hl]);
+					reset(0xDF, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0xAF:
@@ -665,14 +665,14 @@ void GBCPU::execute(){
 					reset(0xBF, _l);
 					break;
 				case 0xB6:
-					reset(0xBF, mem[_hl]);
+					reset(0xBF, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0xB7:
 					reset(0xBF, _a);
 					break;
 				case 0xB8:
-					reset(0x7F, _b)
+					reset(0x7F, _b);
 					break;
 				case 0xB9:
 					reset(0x7F, _c);
@@ -687,10 +687,10 @@ void GBCPU::execute(){
 					reset(0x7F, _h);
 					break;
 				case 0xBD:
-					reset(0x7F, _l)
+					reset(0x7F, _l);
 					break;
 				case 0xBE:
-					reset(0x7F, mem[_hl]);
+					reset(0x7F, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0xBF:
@@ -715,7 +715,7 @@ void GBCPU::execute(){
 					set(0x01, _l);
 					break;
 				case 0xC6:
-					set(0x01, mem[_hl]);
+					set(0x01, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0xC7:
@@ -740,7 +740,7 @@ void GBCPU::execute(){
 					set(0x02, _l);
 					break;
 				case 0xCE:
-					set(0x02, mem[_hl]);
+					set(0x02, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0xCF:
@@ -765,7 +765,7 @@ void GBCPU::execute(){
 					set(0x04, _l);
 					break;
 				case 0xD6:
-					set(0x04, mem[_hl]);
+					set(0x04, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0xD7:
@@ -790,7 +790,7 @@ void GBCPU::execute(){
 					set(0x08, _l);
 					break;
 				case 0xDE:
-					set(0x08, mem[_hl]);
+					set(0x08, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0xDF:
@@ -815,7 +815,7 @@ void GBCPU::execute(){
 					set(0x10, _l);
 					break;
 				case 0xE6:
-					set(0x10, mem[_hl]);
+					set(0x10, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0xE7:
@@ -840,7 +840,7 @@ void GBCPU::execute(){
 					set(0x20, _l);
 					break;
 				case 0xEE:
-					set(0x20, _mem[_hl]);
+					set(0x20, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0xEF:
@@ -865,14 +865,14 @@ void GBCPU::execute(){
 					set(0x40, _l);
 					break;
 				case 0xF6:
-					set(0x40, mem[_hl]);
+					set(0x40, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0xF7:
 					set(0x40, _a);
 					break;
 				case 0xF8:
-					set(0x80, _b)
+					set(0x80, _b);
 					break;
 				case 0xF9:
 					set(0x80, _c);
@@ -887,10 +887,10 @@ void GBCPU::execute(){
 					set(0x80, _h);
 					break;
 				case 0xFD:
-					set(0x80, _l)
+					set(0x80, _l);
 					break;
 				case 0xFE:
-					set(0x80, mem[_hl]);
+					set(0x80, mem.read(_hl));
 					ticks+=4;
 					break;
 				case 0xFF:
