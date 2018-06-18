@@ -7,7 +7,7 @@ namespace gbemu{
 class GBCART{
 public:
 	GBCART(char *fname);
-	unsigned char read(unsigned short addr);
+	unsigned char &read(unsigned short addr);
 	//`write' is actually a bank change...
 	void write(unsigned char dest, unsigned char byte);
 	
@@ -15,8 +15,7 @@ private:
 	struct banks {
 		unsigned char *bank_0;
 		unsigned char *active_swappable_bank;
-	};
-	struct banks active_banks;
+	} active_banks;
 	//will be an inherited class that implements the proper mmu
 	//TODO probably should be pointer to control when constructor is called 
 	MMU_BASE *mmu;

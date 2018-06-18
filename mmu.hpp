@@ -6,8 +6,8 @@ public:
 	MMU_BASE();
 	~MMU_BASE();
 	void setup_banks(unsigned char *rom_dat, unsigned int size);
-	unsigned char *bank(unsigned char &dest, unsigned char &byte);
-private:
+	virtual unsigned char *bank(unsigned char &dest, unsigned char &byte) = 0;
+protected:
 	//banks are 16 KiB big; number of banks depends
 	//on mmu used
 	unsigned char **bank_dat;

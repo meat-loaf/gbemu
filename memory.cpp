@@ -1,22 +1,22 @@
 #include "memory.hpp"
-
+#include <iostream>
 namespace gbemu{
 	//TODO can this be accomplished by allocing
 	//all memory at once and casting the struct over it?
-	GBMEM::GBMEM() : _memblob({
+	GBMEM::GBMEM(char *f) : _memblob{
 				new unsigned char[0x1800],
 				new unsigned char[0x500],
 				new unsigned char[0x500],
-				new unsigned char[0x1800],
+//				new unsigned char[0x1800],
 				new unsigned char[0x2000],
 				new unsigned char[0xA0+0x80+0x80],
-				}){ } 
+				}{ std::cerr << "memconst\n"; cartridge = new GBCART(f); } 
 	GBMEM::~GBMEM() {
 		delete[] _memblob.chram;
 		delete[] _memblob.bg1_ram;
 		delete[] _memblob.bg2_ram;
 		delete[] _memblob.internal_ram;
-		delete[] _memblob.oam;
+		delete[] _memblob.oam_hwio_zeroief;
 	}
 
 	// memory map is as follows, top down:
@@ -36,10 +36,10 @@ namespace gbemu{
 	// $0150-$3FFF 	cart rom, bank 0
 	// $0100-$014F	cart header 
 	// $0000-$00FF 	interrupt vector table (first 255 bytes of cart)
-	unsigned char &GBMEM::read(unsigned char addr){
+	unsigned char &GBMEM::read(unsigned short addr){
 		//read from cartridge
 		if (addr < 0x8000){
-			cartridge.read(addr);
+			return cartridge->read(addr);
 		}
 		//chram, bgdata here...
 		//TODO double check timing? i think bgdata can only be
@@ -47,10 +47,10 @@ namespace gbemu{
 		else if (addr < 0xA000){
 			return addr > 0x97FF ?
 				(addr > 0x9BFF ?
-				 memblob.bg2_ram[addr-0x9800]
-				: memblob.bg1_ram[addr-0x9C00]
+				 _memblob.bg2_ram[addr-0x9800]
+				: _memblob.bg1_ram[addr-0x9C00]
 				)
-				: chram[addr-0x9800] 
+				: _memblob.chram[addr-0x9800]; 
 		}
 		else if (addr > 0xBFFF && addr < 0xFE00){
 			//if we're accessing from echo ram, access same area
@@ -60,13 +60,13 @@ namespace gbemu{
 			return addr > 0xDFFF ?
 				//adjust addresses by 0xC000 as internal ram arr is 0-base
 				//if we're in echo ram adjust by a further 0x2000 
-				_memblob.internal_ram[addr - (0xC000+0x2000)];
+				_memblob.internal_ram[addr - (0xC000+0x2000)]
 				: _memblob.internal_ram[addr - 0xC000];
 		}
 		//OAM/internal registers
 		//need to check OAM writes; can only be written during v/hblank i think
 		else if (addr > 0xFDFF){
-			return _memblob.oam_hwip_zeroief[addr-0xFDFF];
+			return _memblob.oam_hwio_zeroief[addr-0xFDFF];
 		}
 		//cart ram, if applicable	
 		else{
@@ -75,16 +75,16 @@ namespace gbemu{
 	void GBMEM::write(unsigned short addr, unsigned char byte){
 		//write == perform a bank switch
 		if (addr < 0x8000){
-			cartridge.write(addr);
+			cartridge->write(addr, byte);
 		}
 		//write chdata
 		else if (addr < 0xA000){
 			    (addr > 0x97FF ?
 				(addr > 0x9BFF ?
-				 memblob.bg2_ram[addr-0x9800]
-				: memblob.bg1_ram[addr-0x9C00]
+				 _memblob.bg2_ram[addr-0x9800]
+				: _memblob.bg1_ram[addr-0x9C00]
 				)
-				: chram[addr-0x9800]) = byte;
+				: _memblob.chram[addr-0x9800]) = byte;
 		}
 		//write to internal ram; writing to echo ram is
 		//the same as writing to normal ram in practice, so we redirect
@@ -93,13 +93,13 @@ namespace gbemu{
 				//adjust addresses by 0xC000 as internal ram arr is 0-base
 				//if we're in echo ram adjust by a further 0x2000 
 				_memblob.internal_ram[addr - (0xC000+0x2000)]
-				: _memblob.internal_ram[addr - 0xC000]) = byte
+				: _memblob.internal_ram[addr - 0xC000]) = byte;
 		}
 		//OAM/internal registers
 		//need to check OAM writes; can only be written during v/hblank i think
 		//TODO restrictions on writing some registers, need to abstract the write
 		else if (addr > 0xFDFF){
-			_memblob.oam_hwio_zeroief[addr-0xFDFF];
+			_memblob.oam_hwio_zeroief[addr-0xFDFF] = byte;
 		}
 		//cart ram, if applicable
 		//TODO implement in cartridge class

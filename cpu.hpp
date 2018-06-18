@@ -9,14 +9,18 @@ namespace gbemu{
 #define _hl ((_h << 8) + _l)
 class GBCPU{
 public:
-	GBCPU();
+	GBCPU(char *f): _pc(0x100) { mem = new GBMEM(f); }
 	void execute();
+	unsigned char &gname(){
+		return mem->read(0x134);
+	}
+	GBMEM *mem;
+	void dbg_dump();
 private:
 	unsigned char _a, _b, _c, _d, _e, _h, _l; //f is flags!
 	unsigned long long ticks;
 	unsigned short _pc, _sp;
 	unsigned int zf, nf, hf, cf;
-	GBMEM mem;
 	//following are used for opcodes
 
 	//flags aren't effected on 16-bit opcodes...
@@ -38,11 +42,11 @@ private:
 		nf = 0;
 	}
 	inline void inc_u8_mem(unsigned short dest){
-		unsigned char b = mem.read(dest);
+		unsigned char b = mem->read(dest);
 		hf = ((b & 0x10) == 0x10);
 		zf = b+1;
 		nf = 0;
-		mem.write(dest, zf & 0xFF);
+		mem->write(dest, zf & 0xFF);
 	}
 	inline void dec_u8(unsigned char &reg){
 		hf = ((reg & 0x10) == 0x10);
@@ -50,11 +54,11 @@ private:
 		nf = 1;
 	}
 	inline void dec_u8_mem(unsigned char &dest){
-		unsigned char b = mem.read(dest);
+		unsigned char b = mem->read(dest);
 		hf = ((b & 0x10) == 0x10);
 		zf = b-1;
 		nf = 1;
-		mem.write(dest, zf & 0xFF);
+		mem->write(dest, zf & 0xFF);
 	}
 	inline void reg_a_add_u8(unsigned char& reg, bool carry){
 		unsigned short res;
@@ -65,7 +69,10 @@ private:
 		nf = 0;
 	}
 	inline void write_a_to_mem(unsigned char &high, unsigned char &low){
-		mem.write((high & 0xFF) << 8 | (low & 0xFF), _a);
+		mem->write((high & 0xFF) << 8 | (low & 0xFF), _a);
+	}
+	inline void write_pc(unsigned char &high, unsigned char &low){
+		_pc = low + (high << 8);
 	}
 	//these operate slightly differently than their CB-prefixed bretheren
 	inline void rlca(){

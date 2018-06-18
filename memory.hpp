@@ -7,9 +7,8 @@ public:
 
 	unsigned char &read(unsigned short addr);
 	void write(unsigned short addr, unsigned char byte);
-	GBMEM();
+	GBMEM(char *f);
 	~GBMEM();
-	//TODO check if this is needed
 
 private:
 	struct memblob {
@@ -18,8 +17,8 @@ private:
 		unsigned char *bg2_ram;
 		unsigned char *internal_ram;
 		unsigned char *oam_hwio_zeroief;
-	} memblob;
-	GBCART cartridge;
+	};
+	GBCART *cartridge;
 	struct memblob _memblob;
 };
 
