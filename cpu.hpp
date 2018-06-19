@@ -11,15 +11,21 @@ class GBCPU{
 public:
 	GBCPU(char *f): _pc(0x100) { mem = new GBMEM(f); }
 	void execute();
-	unsigned char &gname(){
+	unsigned char gname(){
 		return mem->read(0x134);
 	}
 	GBMEM *mem;
 	void dbg_dump();
 private:
 	unsigned char _a, _b, _c, _d, _e, _h, _l; //f is flags!
-	unsigned long long ticks;
+	unsigned int ticks;
 	unsigned short _pc, _sp;
+	//zero flag stored as complement by operations,
+	//so we check for !zf to determine if set
+	//cf generally gets some non-zero value if set,
+	//so in many operations !!cf is used
+	//notably the extra bit width is useful
+	//for scratch space during calculations
 	unsigned int zf, nf, hf, cf;
 	//following are used for opcodes
 
@@ -37,7 +43,7 @@ private:
 		high = high + ((li >> 8) & 1) & 0xFF;	
 	}
 	inline void inc_u8(unsigned char &reg){
-		hf = ((reg & 0x10) == 0x10);
+		hf = reg & 0x0F;
 		reg = zf = reg+1;
 		nf = 0;
 	}
@@ -53,7 +59,7 @@ private:
 		reg = zf = reg-1;
 		nf = 1;
 	}
-	inline void dec_u8_mem(unsigned char &dest){
+	inline void dec_u8_mem(unsigned short dest){
 		unsigned char b = mem->read(dest);
 		hf = ((b & 0x10) == 0x10);
 		zf = b-1;
@@ -61,11 +67,19 @@ private:
 		mem->write(dest, zf & 0xFF);
 	}
 	inline void reg_a_add_u8(unsigned char& reg, bool carry){
+		//TODO check flag setting logic...
 		unsigned short res;
 		res = carry? _a + reg + (!!cf) : _a + reg;
 		hf = (reg & 0x10) == 0x10;
 		cf = (reg & 0x100) == 0x100;
 		_a = zf = res & 0xFF;
+		nf = 0;
+	}
+	inline void reg_add_u16(unsigned char& high_s, unsigned char &low_s, unsigned int v){
+		hf = (low_s & 0x0F + (v & 0xF)) & 0x10;
+		cf = ((high_s << 8) + low_s) + v;
+		high_s = (cf & 0xFF00) >> 8;
+		low_s = (cf & 0x00FF);
 		nf = 0;
 	}
 	inline void write_a_to_mem(unsigned char &high, unsigned char &low){
@@ -74,17 +88,46 @@ private:
 	inline void write_pc(unsigned char &high, unsigned char &low){
 		_pc = low + (high << 8);
 	}
-	//these operate slightly differently than their CB-prefixed bretheren
+	inline void cond_jmp_rel(unsigned int flag, signed char off){
+		if (flag){
+			_pc += off;
+			ticks += 8;
+		} else {
+			_pc += 1;
+			ticks += 4;
+		}
+	}
+	//satan's opcode
+	inline void daa(){
+		//TODO check this; how to set carry flag
+		if (((_a & 0x0F) > 0x09) || hf){
+			_a += (nf ? -0x06 : 0x06);
+		}
+		if (((_a & 0xF0) > 0x90) || cf){
+			_a += (nf ? -0x60 : 0x60);
+		} else { cf = 0; }
+		zf = _a;
+		hf = 0;
+	}
+	//instructions that perform accumulator shifts always clear
+	//zero flag; CB-prefixed shifts set as you might expect.
 	inline void rlca(){
 		cf = _a << 1;
 		_a = (cf | cf >> 8) & 0xFF;
 		zf = hf = nf = 0;
 	}
+	inline void rra(){
+		cf = (_a << 1) + (!!cf);
+		_a = cf & 0xFF;
+		cf &= 0x100;
+		zf = hf = nf = 0;
+	}
 	inline void rrca(){
-		cf = _a & 0x1;
+		cf = _a & 0x01;
 		_a = (_a >> 1) | (cf << 8);
 		zf = hf = nf = 0;
 	}
+	//sp never referenced as two 8-bit regs, so it gets its own funcs
 	inline void write_sp(unsigned short sp_n){
 		_sp = sp_n;
 	}

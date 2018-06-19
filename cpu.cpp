@@ -7,7 +7,6 @@ void GBCPU::execute(){
 	switch(opcode){
 		//NOP
 		case 0x0:
-			std::cerr << "NO OP\n";
 			break;
 		case 0x01:
 			reg_load_u16(_b, _c, mem->read(_pc), mem->read(_pc+1));
@@ -32,16 +31,16 @@ void GBCPU::execute(){
 			reg_load(_b, mem->read(_pc));
 			_pc+=1;
 			ticks+=4;
+			break;
 		case 0x07:
 			rlca();
 			break;
 		case 0x08:
 			write_sp(mem->read(_pc) << 8 | mem->read(_pc+1));
 			ticks+=16;
-			
 			break;
-		//TODO ADD HL, BC
 		case 0x09:
+			reg_add_u16(_h, _l, _bc);
 			break;
 		case 0x0A:
 			reg_load(_a, mem->read(_bc));
@@ -62,12 +61,12 @@ void GBCPU::execute(){
 			_pc+=1;
 			ticks+=4;
 		case 0x0F:
-			//RRCA
+			rrca();
 			break;
 		case 0x10:
-			//STOP
-			//stop is encoded 0x10 0x00 for some reason
-			_pc+=1;
+			//TODO STOP
+			//stop is encoded 0x10 0x00 (sometimes?)
+			//but 0x00 is noop so we can ignore it...
 			break;
 		case 0x11:
 			reg_load_u16(_d, _e, mem->read(_pc), mem->read(_pc+1));
@@ -101,10 +100,12 @@ void GBCPU::execute(){
 			break;
 		//TODO ADD HL, DE
 		case 0x19:
-			reg_load(_a, mem->read(_de));
+			reg_add_u16(_h, _l, _de);
 			ticks+=4;
 			break;
 		case 0x1A:
+			reg_load(_a, mem->read(_de));
+			ticks+=4;
 			break;
 		case 0x1B:
 			dec_u16(_d, _e);
@@ -121,15 +122,11 @@ void GBCPU::execute(){
 			_pc+=1;
 			ticks+=4;
 			break;
-		//TODO RRA
 		case 0x1F:
+			rra();
 			break;
 		case 0x20:
-			//note we store complement of zero flag, will be 0 if set
-			_pc += (!zf) ? 
-				static_cast<signed char>(mem->read(_pc)) 
-				: 1;
-			ticks += (!zf) ? 8 : 4;
+			cond_jmp_rel(zf, static_cast<signed char>(mem->read(_pc)));
 			break;
 		case 0x21:
 			reg_load_u16(_h, _l, mem->read(_pc), mem->read(_pc+1));
@@ -156,13 +153,15 @@ void GBCPU::execute(){
 			_pc+=1;
 			ticks+=4;
 			break;
-		//TODO DAA
 		case 0x27:
+			daa();
 			break;
 		case 0x28:
+			cond_jmp_rel(!zf, static_cast<signed char>(mem->read(_pc)));
 			break;
-		//TODO ADD HL, HL
 		case 0x29:
+			reg_add_u16(_h, _l, _hl);
+			ticks+=4;
 			break;
 		case 0x2A:
 			reg_load(_a, mem->read(_hl));
@@ -184,14 +183,14 @@ void GBCPU::execute(){
 			_pc+=1;
 			ticks+=4;
 			break;
-		//TODO CPL
 		case 0x2F:
+			_a = ~_a;
 			break;
-		//TODO JR NC, r8
 		case 0x30:
+			cond_jmp_rel(!cf, static_cast<signed char>(mem->read(_pc)));
 			break;
-		//TODO LD SP, d16
 		case 0x31:
+			write_sp(mem->read(_pc) + (mem->read(_pc+1) << 8));
 			break;
 		case 0x32:
 			mem->write(_hl, _a);
@@ -206,17 +205,28 @@ void GBCPU::execute(){
 			ticks+=8;
 			break;
 		case 0x35:
-/*			dec_u8_mem(_hl);
-			ticks+=8;*/
+			dec_u8_mem(_hl);
+			ticks+=8;
 			break;
 		case 0x36:
-			//TODO fix?
 			mem->write(_hl, mem->read(_pc));
 			_pc+=1;
 			ticks+=8;
 			break;
-		//TODO SCF
 		case 0x37:
+			cf = 1;
+			break;
+		case 0x38:
+			cond_jmp_rel(cf, static_cast<signed char>(mem->read(_pc)));
+			break;
+		case 0x39:
+			reg_add_u16(_h, _l, _sp);
+			ticks+=4;
+			break;
+		case 0x3A:
+			reg_load(_a, mem->read(_hl));
+			dec_u16(_h, _l);
+			ticks+=4;
 			break;
 		case 0x3B:
 			_sp = _sp-1 & 0xFFFF;
@@ -227,6 +237,9 @@ void GBCPU::execute(){
 			break;
 		case 0x3D:
 			dec_u8(_a);
+			break;
+		case 0x3F:
+			cf = !cf;
 			break;
 		case 0x40:
 			reg_load(_b, _b);
@@ -379,32 +392,26 @@ void GBCPU::execute(){
 			reg_load(_l, _a);
 			break;
 		case 0x70:
-			//reg_load(mem[_hl], _b);
 			mem->write(_hl, _b);
 			ticks+=4;
 			break;
 		case 0x71:
-			//reg_load(mem[_hl], _c);
 			mem->write(_hl, _c);
 			ticks+=4;
 			break;
 		case 0x72:
-			//reg_load(mem[_hl], _d);
 			mem->write(_hl, _d);
 			ticks+=4;
 			break;
 		case 0x73:
-			//reg_load(mem[_hl], _e);
 			mem->write(_hl, _e);
 			ticks+=4;
 			break;
 		case 0x74:
-			//reg_load(mem[_hl], _h);
 			mem->write(_hl, _h);
 			ticks+=4;
 			break;
 		case 0x75:
-			//reg_load(mem[_hl], _l);
 			mem->write(_hl, _l);
 			ticks+=4;
 			break;
@@ -412,7 +419,6 @@ void GBCPU::execute(){
 		case 0x76:
 			break;
 		case 0x77:
-			//reg_load(mem[_hl], _a);
 			mem->write(_hl, _a);
 			break;
 		case 0x78:
@@ -459,12 +465,139 @@ void GBCPU::execute(){
 			reg_a_add_u8(_l, false);
 			break;
 		case 0x86:
-			//TODO fix
-/*			reg_a_add_u8(mem[_hl], false);
-			ticks+=4;
-			break;*/
+			reg_a_add_u8(mem->read(_hl), false);
+			ticks+=8;
+			break;
+		case 0x87:
+			reg_a_add_u8(_a, false);
+			break;
+		case 0x88:
+			reg_a_add_u8(_b, true);
+			break;
+		case 0x89:
+			reg_a_add_u8(_c, true);
+			break;
+		case 0x8A:
+			reg_a_add_u8(_d, true);
+			break;
+		case 0x8B:
+			reg_a_add_u8(_e, true);
+			break;
+		case 0x8C:
+			reg_a_add_u8(_h, true);
+			break;
+		case 0x8D:
+			reg_a_add_u8(_l, true);
+			break;
+		case 0x8E:
+			reg_a_add_u8(mem->read(_hl), true);
+			break;
+		case 0x8F:
+			reg_a_add_u8(_a, true);
+		case 0x90:
+			break;
+		case 0x91:
+			break;
+		case 0x92:
+			break;
+		case 0x93:
+			break;
+		case 0x94:
+			break;
+		case 0x95:
+			break;
+		case 0x96:
+			break;
+		case 0x97:
+			break;
+		case 0x98:
+			break;
+		case 0x99:
+			break;
+		case 0x9A:
+			break;
+		case 0x9B:
+			break;
+		case 0x9C:
+			break;
+		case 0x9D:
+			break;
+		case 0x9E:
+			break;
+		case 0x9F:
+			break;
+		case 0xA0:
+			break;
+		case 0xA1:
+			break;
+		case 0xA2:
+			break;
+		case 0xA3:
+			break;
+		case 0xA4:
+			break;
+		case 0xA5:
+			break;
+		case 0xA6:
+			break;
+		case 0xA7:
+			break;
+		case 0xA8:
+			break;
+		case 0xA9:
+			break;
+		case 0xAA:
+			break;
+		case 0xAB:
+			break;
+		case 0xAC:
+			break;
+		case 0xAD:
+			break;
+		case 0xAE:
+			break;
+		case 0xAF:
+			break;
+		case 0xB0:
+			break;
+		case 0xB1:
+			break;
+		case 0xB2:
+			break;
+		case 0xB3:
+			break;
+		case 0xB4:
+			break;
+		case 0xB5:
+			break;
+		case 0xB6:
+			break;
+		case 0xB7:
+			break;
+		case 0xB8:
+			break;
+		case 0xB9:
+			break;
+		case 0xBA:
+			break;
+		case 0xBB:
+			break;
+		case 0xBC:
+			break;
+		case 0xBD:
+			break;
+		case 0xBE:
+			break;
+		case 0xBF:
+			break;
+		case 0xC0:
+			break;
+		case 0xC1:
+			break;
+		case 0xC2:
+			break;
 		case 0xC3:
-			write_pc(mem->read(_pc+1), mem->read());
+			write_pc(mem->read(_pc+1), mem->read(_pc));
 			ticks += 8;
 			break;
 		case 0xCB:
