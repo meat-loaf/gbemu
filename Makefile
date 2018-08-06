@@ -1,6 +1,6 @@
 #TODO make a not dumb makefile
 TARGET_EXEC ?= gbemu
-CPPFLAGS := --std=c++11 -g
+CPPFLAGS := --std=c++11 -g -O2
 
 TARGET_EXEC: cartridge.o cpu.o memory.o mmu.o
 	g++ main.cpp -o $(TARGET_EXEC) cartridge.o cpu.o memory.o mmu.o $(CPPFLAGS)
