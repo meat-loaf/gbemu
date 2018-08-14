@@ -28,7 +28,8 @@ private:
 	//for scratch space during calculations
 	unsigned int zf, nf, hf, cf;
 	//following are used for opcodes
-
+	bool runnable = true;
+	bool interrupts = true;
 	//flags aren't effected on 16-bit opcodes...
 	//stack var used incase low reg overflows
 	//TODO check validity
@@ -75,6 +76,81 @@ private:
 		_a = zf = res & 0xFF;
 		nf = 0;
 	}
+	inline void reg_a_sub_u8(unsigned char& reg, bool carry){
+		//TODO check flag setting logic...
+		unsigned short res;
+		res = carry? _a - reg - (!!cf) : _a - reg;
+		//set if no borrow
+		hf = !((reg & 0x10) == 0x10);
+		cf = !((reg & 0x100) == 0x100);
+		_a = zf = res & 0xFF;
+		nf = 1;
+	}
+	inline void reg_a_and_u8(unsigned char& reg){
+		_a &= reg;
+		zf = _a;
+		nf = 0;
+		cf = 0;
+		hf = 1;
+	}
+	inline void reg_a_xor_u8(unsigned char& reg){
+		_a ^= reg;
+		zf = _a;
+		nf = 0;
+		cf = 0;
+		hf = 0;
+	}
+	inline void reg_a_or_u8(unsigned char& reg){
+		_a |= reg;
+		zf = _a;
+		nf = 0;
+		cf = 0;
+		hf = 0;
+	}
+	inline void ret(bool ifjmp){
+		if(ifjmp){
+			_pc = (mem->read(_sp) << 8 & mem->read(_sp+1));
+			_sp += 2;
+			ticks+=16;
+		} else {
+			_pc += 1;
+			ticks+=4;
+		}
+	}
+	inline void pop(unsigned char& regl, unsigned char &regh){
+		regl = mem->read(_sp);
+		regh = mem->read(_sp+1);
+		_sp += 2;
+		ticks += 8;
+	}
+	inline void push(unsigned char& regl, unsigned char &regh){
+		mem->write(_sp-1, regh);
+		mem->write(_sp-2, regl);
+		_sp -= 2;
+		ticks += 12;
+	}
+	inline void ldh_into_mem(){
+		mem->write(0xFF00 + mem->read(_pc), _a);
+		_pc+=1;
+		ticks+=8;
+	}
+	inline void ldh_into_a(){
+		_a = (mem->read(_pc) & 0xFF) + 0xFF00;
+		_pc+=1;
+		ticks+=8;
+	}
+	//really just a subtraction that sets flags...
+	//TODO maybe make sub and this the same?
+	inline void reg_a_cmp_u8(unsigned char& reg){
+		//TODO check flag setting logic...
+		unsigned short res;
+		res = _a - reg;
+		//set if no borrow
+		hf = !((reg & 0x10) == 0x10);
+		cf = !((reg & 0x100) == 0x100);
+		zf = res & 0xFF;
+		nf = 1;
+	}
 	inline void reg_add_u16(unsigned char& high_s, unsigned char &low_s, unsigned int v){
 		hf = (low_s & 0x0F + (v & 0xF)) & 0x10;
 		cf = ((high_s << 8) + low_s) + v;
@@ -97,9 +173,24 @@ private:
 			ticks += 4;
 		}
 	}
+	inline void cond_jmp_abs(unsigned int flag){
+		if (flag){
+			_pc = (mem->read(_pc) + (mem->read(_pc+1) >> 8));
+			ticks += 12;
+		} else {
+			_pc+= 2;
+			ticks += 4;
+		}
+	}
+	inline void rst(unsigned char val){
+		mem->write(_sp-1, (_pc & 0xFF00) >> 8);
+		mem->write(_sp-2, (_pc & 0xFF));
+		_pc = 0x0000 | val;
+		ticks += 12;
+	};
 	//satan's opcode
 	inline void daa(){
-		//TODO check this; how to set carry flag
+		//TODO check this; how to set carry flag (?)
 		if (((_a & 0x0F) > 0x09) || hf){
 			_a += (nf ? -0x06 : 0x06);
 		}
@@ -115,6 +206,11 @@ private:
 		cf = _a << 1;
 		_a = (cf | cf >> 8) & 0xFF;
 		zf = hf = nf = 0;
+	}
+	inline void rla(){
+		cf = _a << 8 | !!cf;
+		zf = hf = nf = 0;
+		return;	
 	}
 	inline void rra(){
 		cf = (_a << 1) + (!!cf);

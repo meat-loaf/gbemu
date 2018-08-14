@@ -5,7 +5,6 @@ void GBCPU::execute(){
 	unsigned char opcode = mem->read(_pc);
 	_pc++; ticks+=4;
 	switch(opcode){
-		//NOP
 		case 0x0:
 			break;
 		case 0x01:
@@ -64,9 +63,7 @@ void GBCPU::execute(){
 			rrca();
 			break;
 		case 0x10:
-			//TODO STOP
-			//stop is encoded 0x10 0x00 (sometimes?)
-			//but 0x00 is noop so we can ignore it...
+			runnable = false;
 			break;
 		case 0x11:
 			reg_load_u16(_d, _e, mem->read(_pc), mem->read(_pc+1));
@@ -91,14 +88,13 @@ void GBCPU::execute(){
 			reg_load(_d, mem->read(_pc));
 			_pc+=1;
 			ticks+=4;
-		//TODO RLA
 		case 0x17:
+			rla();
 			break;
 		case 0x18:
 			_pc += static_cast<signed char>(mem->read(_pc));
 			ticks+=8;
 			break;
-		//TODO ADD HL, DE
 		case 0x19:
 			reg_add_u16(_h, _l, _de);
 			ticks+=4;
@@ -127,6 +123,7 @@ void GBCPU::execute(){
 			break;
 		case 0x20:
 			cond_jmp_rel(zf, static_cast<signed char>(mem->read(_pc)));
+			_pc+=1;
 			break;
 		case 0x21:
 			reg_load_u16(_h, _l, mem->read(_pc), mem->read(_pc+1));
@@ -495,110 +492,184 @@ void GBCPU::execute(){
 		case 0x8F:
 			reg_a_add_u8(_a, true);
 		case 0x90:
+			reg_a_sub_u8(_b, false);
 			break;
 		case 0x91:
+			reg_a_sub_u8(_c, false);
 			break;
 		case 0x92:
+			reg_a_sub_u8(_d, false);
 			break;
 		case 0x93:
+			reg_a_sub_u8(_e, false);
 			break;
 		case 0x94:
+			reg_a_sub_u8(_h, false);
 			break;
 		case 0x95:
+			reg_a_sub_u8(_l, false);
 			break;
 		case 0x96:
+			reg_a_sub_u8(mem->read(_hl), false);
 			break;
 		case 0x97:
+			reg_a_sub_u8(_a, false);
 			break;
 		case 0x98:
+			reg_a_sub_u8(_b, true);
 			break;
 		case 0x99:
+			reg_a_sub_u8(_c, true);
 			break;
 		case 0x9A:
+			reg_a_sub_u8(_d, true);
 			break;
 		case 0x9B:
+			reg_a_sub_u8(_e, true);
 			break;
 		case 0x9C:
+			reg_a_sub_u8(_h, true);
 			break;
 		case 0x9D:
+			reg_a_sub_u8(_l, true);
 			break;
 		case 0x9E:
+			reg_a_sub_u8(mem->read(_hl), true);
 			break;
 		case 0x9F:
+			reg_a_sub_u8(_a, true);
 			break;
 		case 0xA0:
+			reg_a_and_u8(_b);
 			break;
 		case 0xA1:
+			reg_a_and_u8(_c);
 			break;
 		case 0xA2:
+			reg_a_and_u8(_d);
 			break;
 		case 0xA3:
+			reg_a_and_u8(_e);
 			break;
 		case 0xA4:
+			reg_a_and_u8(_h);
 			break;
 		case 0xA5:
+			reg_a_and_u8(_l);
 			break;
 		case 0xA6:
+			reg_a_and_u8(mem->read(_hl));
 			break;
 		case 0xA7:
+			//does nothing but set flags
+			reg_a_and_u8(_a);
 			break;
 		case 0xA8:
+			reg_a_xor_u8(_b);
 			break;
 		case 0xA9:
+			reg_a_xor_u8(_c);
 			break;
 		case 0xAA:
+			reg_a_xor_u8(_d);
 			break;
 		case 0xAB:
+			reg_a_xor_u8(_e);
 			break;
 		case 0xAC:
+			reg_a_xor_u8(_h);
 			break;
 		case 0xAD:
+			reg_a_xor_u8(_l);
 			break;
 		case 0xAE:
+			reg_a_xor_u8(mem->read(_hl));
 			break;
 		case 0xAF:
+			reg_a_xor_u8(_a);
 			break;
 		case 0xB0:
+			reg_a_or_u8(_b);
 			break;
 		case 0xB1:
+			reg_a_or_u8(_c);
 			break;
 		case 0xB2:
+			reg_a_or_u8(_d);
 			break;
 		case 0xB3:
+			reg_a_or_u8(_e);
 			break;
 		case 0xB4:
+			reg_a_or_u8(_h);
 			break;
 		case 0xB5:
+			reg_a_or_u8(_l);
 			break;
 		case 0xB6:
+			reg_a_or_u8(mem->read(_hl));
 			break;
 		case 0xB7:
+			reg_a_or_u8(_a);
 			break;
 		case 0xB8:
+			reg_a_cmp_u8(_b);
 			break;
 		case 0xB9:
+			reg_a_cmp_u8(_c);
 			break;
 		case 0xBA:
+			reg_a_cmp_u8(_d);
 			break;
 		case 0xBB:
+			reg_a_cmp_u8(_e);
 			break;
 		case 0xBC:
+			reg_a_cmp_u8(_h);
 			break;
 		case 0xBD:
+			reg_a_cmp_u8(_l);
 			break;
 		case 0xBE:
+			reg_a_cmp_u8(mem->read(_hl));
 			break;
 		case 0xBF:
+			reg_a_cmp_u8(_a);
 			break;
+		//ret if flags is not zero...but we store complement
 		case 0xC0:
+			ret(zf);
 			break;
 		case 0xC1:
+			pop(_b, _c);	
 			break;
 		case 0xC2:
+			cond_jmp_abs(zf);
 			break;
 		case 0xC3:
 			write_pc(mem->read(_pc+1), mem->read(_pc));
 			ticks += 8;
+			break;
+		//TODO CALL NZ, imm_16
+		case 0xC4:
+			break;
+		case 0xC5:
+			push(_b, _c);
+			break;
+		//TODO ADD a, d8
+		case 0xC6:
+			break;
+		case 0xC7:
+			rst(0x0);
+			break;
+		case 0xC8:
+			ret(!zf);
+			break;
+		case 0xC9:
+			ret(true);
+			break;
+		case 0xCA:
+			cond_jmp_abs(!zf);
 			break;
 		case 0xCB:
 		{
@@ -1036,7 +1107,158 @@ void GBCPU::execute(){
 					set(0x80, _a);
 					break;
 			}
+			break;
 		}
+		//TODO CALL Z, imm_16
+		case 0xCC:
+			break;
+		//TODO CALL imm_16
+		case 0xCD:
+			break;
+		//TODO ADD a, imm_8
+		case 0xCE:
+			break;
+		case 0xCF:
+			rst(0x08);
+			break;
+		case 0xD0:
+			ret(!cf);
+			break;
+		case 0xD1:
+			pop(_d, _e);
+			break;
+		case 0xD2:
+			cond_jmp_abs(!cf);
+			break;
+		//undefined opcode
+		//TODO better handling maybe so it doesnt look the same as STOP
+		case 0xD3:
+			runnable = false;
+			break;
+		//TODO CALL !cf, imm_16 
+		case 0xD4:
+			break;
+		case 0xD5:
+			push(_d, _e);
+			break;
+		//TODO sub a-imm_8
+		case 0xD6:
+			break;
+		case 0xD7:
+			rst(0x10);
+			break;
+		case 0xD8:
+			ret(cf);
+			break;
+		case 0xD9:
+			ret(true);
+			interrupts = true;
+			break;
+		case 0xDA:
+			cond_jmp_abs(cf);
+		case 0xDB:
+			runnable = false;
+			break;
+		//TODO CALL c, imm_16
+		case 0xDC:
+			break;
+		case 0xDD:
+			runnable = false;
+			break;
+		//TODO SBC a, d8
+		case 0xDE:
+			break;
+		case 0xDF:
+			rst(0x18);
+			break;
+		case 0xE0:
+			ldh_into_mem();
+			break;
+		case 0xE1:
+			pop(_h, _l);
+			break;
+		//TODO LD (C), A
+		case 0xE2:
+			break;
+		case 0xE3:
+		case 0xE4:
+			runnable = false;
+			break;
+		case 0xE5:
+			push(_h, _l);
+			break;
+		//TODO AND imm_8
+		case 0xE6:
+			break;
+		case 0xE7:
+			rst(0x20);
+			break;
+		//TODO ADD SP,r8
+		case 0xE8:
+			break;
+		case 0xE9:
+			_pc = _hl;
+			break;
+		//TODO LD (imm_16), A
+		case 0xEA:
+			break;
+		case 0xEB:
+		case 0xEC:
+		case 0xED:
+			runnable = false;
+			break;
+		//TODO xor imm_8
+		case 0xEE:
+			break;
+		case 0xEF:
+			rst(0x28);
+			break;
+		case 0xF0:
+			ldh_into_a();
+			break;
+		//TODO pop AF
+		//special case
+		case 0xF1:
+			break;
+		case 0xF2:
+			break;
+		case 0xF3:
+			interrupts = false;
+			break;
+		case 0xF4:
+			runnable = false;
+			break;
+		//TODO push af
+		case 0xF5:
+			break;
+		//TODO OR imm_8
+		case 0xF6:
+			break;
+		case 0xF7:
+			rst(0x30);
+			break;
+		//TODO LD hl, sp+imm_8
+		case 0xF8:
+			break;
+		case 0xF9:
+			_sp = _hl;
+			ticks+=4;
+			break;
+		//TODO LD A, (imm_16)
+		case 0xFA:
+			break;
+		case 0xFB:
+			interrupts = true;
+		case 0xFC:
+		case 0xFD:
+			runnable = false;
+			break;
+		//TODO cp imm_8
+		case 0xFE:
+			break;
+		case 0xFF:
+			rst(0x38);
+			break;
 	}	
 }
 void GBCPU::dbg_dump(){
