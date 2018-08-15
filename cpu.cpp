@@ -1286,7 +1286,7 @@ void GBCPU::execute(){
 			call(true, IMM_16_PC);
 			break;
 		case 0xCE:
-			reg_a_add_u8(_pc, true);
+			add_a_imm_mem(_pc, true);
 			break;
 		case 0xCF:
 			rst(0x08);
@@ -1310,7 +1310,7 @@ void GBCPU::execute(){
 			push(_d, _e);
 			break;
 		case 0xD6:
-			reg_a_sub_u8(_pc, false); 
+			sub_a_imm_mem(_pc, false); 
 			break;
 		case 0xD7:
 			rst(0x10);
@@ -1357,7 +1357,7 @@ void GBCPU::execute(){
 			push(_h, _l);
 			break;
 		case 0xE6:
-			_a & mem->read(_pc);
+			_a = _a & mem->read(_pc);
 			zf = _a;
 			hf = cf = 0;
 			nf = 1;
@@ -1368,10 +1368,10 @@ void GBCPU::execute(){
 			rst(0x20);
 			break;
 		case 0xE8:
-			reg_add_u16(_sp, mem->read(_pc));
-			pc++;
+			/*reg_add_u16(_sp, mem->read(_pc));
+			_pc++;
 			ticks+=8;
-			break;
+			break;*/
 		case 0xE9:
 			_pc = _hl;
 			break;
@@ -1385,7 +1385,7 @@ void GBCPU::execute(){
 			runnable = false;
 			break;
 		case 0xEE:
-			_a ^ mem->read(_pc);
+			_a = _a ^ mem->read(_pc);
 			zf = _a;
 			hf = cf = nf = 0;
 			_pc++;
@@ -1440,7 +1440,7 @@ void GBCPU::execute(){
 			runnable = false;
 			break;
 		case 0xFE:
-			cmp_imm(mem->read(_pc);
+			cmp_imm(mem->read(_pc));
 			_pc++;
 			ticks+=4;
 			break;

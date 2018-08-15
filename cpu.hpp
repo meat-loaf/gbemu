@@ -78,7 +78,7 @@ private:
 		_a = zf = res & 0xFF;
 		nf = 0;
 	}
-	inline void add_a_imm_mem(unsigned short, bool carry){
+	inline void add_a_imm_mem(unsigned short addr, bool carry){
 		unsigned char reg = mem->read(addr);
 		reg_a_add_u8(reg, carry);
 		mem->write(addr, reg);
@@ -157,10 +157,10 @@ private:
 		ticks += 12;
 	}
 	inline void push_af(){
-		unsigned char f = (!zf << 8) | 
+		unsigned char f =( (!zf << 8) | 
 				(!!nf << 7)  |
 				(!!hf << 6)  |
-				(!!cf << 5)  & 0xF0;
+				(!!cf << 5)  )& 0xF0;
 		mem->write(_sp-1, _a);
 		mem->write(_sp-2, f);
 		_sp -= 2;
