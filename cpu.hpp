@@ -157,7 +157,7 @@ private:
 		ticks += 12;
 	}
 	inline void push_af(){
-		unsigned char f =( (!zf << 8) | 
+		unsigned char f =((!zf << 8) | 
 				(!!nf << 7)  |
 				(!!hf << 6)  |
 				(!!cf << 5)  )& 0xF0;
