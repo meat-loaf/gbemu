@@ -1,5 +1,8 @@
 #include "cpu.hpp"
 #include <iostream>
+
+//TODO better undefined opcode handling so it isnt the same as STOP
+//throw exception?
 namespace gbemu{
 void GBCPU::execute(){
 	unsigned char opcode = mem->read(_pc);
@@ -650,14 +653,14 @@ void GBCPU::execute(){
 			write_pc(mem->read(_pc+1), mem->read(_pc));
 			ticks += 8;
 			break;
-		//TODO CALL NZ, imm_16
 		case 0xC4:
+			call(zf, IMM_16_PC); 
 			break;
 		case 0xC5:
 			push(_b, _c);
 			break;
-		//TODO ADD a, d8
 		case 0xC6:
+			add_a_imm_mem(_pc, false);
 			break;
 		case 0xC7:
 			rst(0x0);
@@ -676,6 +679,150 @@ void GBCPU::execute(){
 			unsigned char opcode_2 = mem->read(_pc);
 			_pc++; ticks+=4;
 			switch(opcode_2){
+				case 0x00:
+					rlc(_b);
+					break;
+				case 0x01:
+					rlc(_c);
+					break;
+				case 0x02:
+					rlc(_d);
+					break;
+				case 0x03:
+					rlc(_e);
+					break;
+				case 0x04:
+					rlc(_h);
+					break;
+				case 0x05:
+					rlc(_l);
+					break;
+				case 0x06:
+					rlc_mem(_hl);
+					break;
+				case 0x07:
+					rlc(_a);
+					break;
+				case 0x08:
+					rrc(_b);
+					break;
+				case 0x09:
+					rrc(_c);
+					break;
+				case 0x0A:
+					rrc(_d);
+					break;
+				case 0x0B:
+ 					rrc(_e);
+					break;
+				case 0x0C:
+					rrc(_h);
+					break;
+				case 0x0D:
+					rrc(_l);
+					break;
+				case 0x0E:
+					rrc_mem(_hl);
+					break;
+				case 0x0F:
+					rrc(_a);
+					break;
+				case 0x10:
+					rl(_b);
+					break;
+				case 0x11:
+					rl(_c);
+					break;
+				case 0x12:
+					rl(_d);
+					break;
+				case 0x13:
+					rl(_e);
+					break;
+				case 0x14:
+					rl(_h);
+					break;
+				case 0x15:
+					rl(_l);
+					break;
+				case 0x16:
+					rl_mem(_hl);
+					break;
+				case 0x17:
+					rl(_a);
+					break;
+				case 0x18:
+					rr(_b);
+					break;
+				case 0x19:
+					rr(_c);
+					break;
+				case 0x1A:
+					rr(_d);
+					break;
+				case 0x1B:
+ 					rr(_e);
+					break;
+				case 0x1C:
+					rr(_h);
+					break;
+				case 0x1D:
+					rr(_l);
+					break;
+				case 0x1E:
+					rr_mem(_hl);
+					break;
+				case 0x1F:
+					rr(_a);
+					break;
+				case 0x20:
+					sla(_b);
+					break;
+				case 0x21:
+					sla(_c);
+					break;
+				case 0x22:
+					sla(_d);
+					break;
+				case 0x23:
+					sla(_e);
+					break;
+				case 0x24:
+					sla(_h);
+					break;
+				case 0x25:
+					sla(_l);
+					break;
+				case 0x26:
+					sla(_hl);
+					break;
+				case 0x27:
+					sra(_a);
+					break;
+				case 0x28:
+					sra(_b);	
+					break;
+				case 0x29:
+					sra(_c);
+					break;
+				case 0x2A:
+					sra(_d);	
+					break;
+				case 0x2B:
+					sra(_e);
+					break;
+				case 0x2C:
+					sra(_h);
+					break;
+				case 0x2D:
+					sra(_l);
+					break;
+				case 0x2E:
+					sra(_hl);
+					break;
+				case 0x2F:
+					sra(_a);
+					break;
 				case 0x30:
 					swap(_b);
 					break;
@@ -695,12 +842,35 @@ void GBCPU::execute(){
 					swap(_l);
 					break;
 				case 0x36:
-					//TODO fix
-				//	swap(mem[_hl]);
+					swap(_hl);
 					ticks+=8;
 					break;
 				case 0x37:
 					swap(_a);
+					break;
+				case 0x38:
+					srl(_b);
+					break;
+				case 0x39:
+					srl(_c);
+					break;
+				case 0x3A:
+					srl(_d);
+					break;
+				case 0x3B:
+					srl(_e);
+					break;
+				case 0x3C:
+					srl(_h);
+					break;
+				case 0x3D:
+					srl(_l);
+					break;
+				case 0x3E:
+					srl(_hl);
+					break;
+				case 0x3F:
+					srl(_a);
 					break;
 				case 0x80:
 					reset(0xFE, _b);
@@ -1109,14 +1279,14 @@ void GBCPU::execute(){
 			}
 			break;
 		}
-		//TODO CALL Z, imm_16
 		case 0xCC:
+			call(!zf, IMM_16_PC);
 			break;
-		//TODO CALL imm_16
 		case 0xCD:
+			call(true, IMM_16_PC);
 			break;
-		//TODO ADD a, imm_8
 		case 0xCE:
+			reg_a_add_u8(_pc, true);
 			break;
 		case 0xCF:
 			rst(0x08);
@@ -1130,19 +1300,17 @@ void GBCPU::execute(){
 		case 0xD2:
 			cond_jmp_abs(!cf);
 			break;
-		//undefined opcode
-		//TODO better handling maybe so it doesnt look the same as STOP
 		case 0xD3:
 			runnable = false;
 			break;
-		//TODO CALL !cf, imm_16 
 		case 0xD4:
+			call(!cf, IMM_16_PC);
 			break;
 		case 0xD5:
 			push(_d, _e);
 			break;
-		//TODO sub a-imm_8
 		case 0xD6:
+			reg_a_sub_u8(_pc, false); 
 			break;
 		case 0xD7:
 			rst(0x10);
@@ -1156,17 +1324,18 @@ void GBCPU::execute(){
 			break;
 		case 0xDA:
 			cond_jmp_abs(cf);
+			break;
 		case 0xDB:
 			runnable = false;
 			break;
-		//TODO CALL c, imm_16
 		case 0xDC:
+			call(cf, IMM_16_PC);
 			break;
 		case 0xDD:
 			runnable = false;
 			break;
-		//TODO SBC a, d8
 		case 0xDE:
+			sub_a_imm_mem(_pc, true);
 			break;
 		case 0xDF:
 			rst(0x18);
@@ -1187,28 +1356,40 @@ void GBCPU::execute(){
 		case 0xE5:
 			push(_h, _l);
 			break;
-		//TODO AND imm_8
 		case 0xE6:
+			_a & mem->read(_pc);
+			zf = _a;
+			hf = cf = 0;
+			nf = 1;
+			_pc++;
+			ticks+=4;
 			break;
 		case 0xE7:
 			rst(0x20);
 			break;
-		//TODO ADD SP,r8
 		case 0xE8:
+			reg_add_u16(_sp, mem->read(_pc));
+			pc++;
+			ticks+=8;
 			break;
 		case 0xE9:
 			_pc = _hl;
 			break;
-		//TODO LD (imm_16), A
 		case 0xEA:
+			reg_store_mem(_pc);
+			ticks += 12;
 			break;
 		case 0xEB:
 		case 0xEC:
 		case 0xED:
 			runnable = false;
 			break;
-		//TODO xor imm_8
 		case 0xEE:
+			_a ^ mem->read(_pc);
+			zf = _a;
+			hf = cf = nf = 0;
+			_pc++;
+			ticks+=4;
 			break;
 		case 0xEF:
 			rst(0x28);
@@ -1216,9 +1397,8 @@ void GBCPU::execute(){
 		case 0xF0:
 			ldh_into_a();
 			break;
-		//TODO pop AF
-		//special case
 		case 0xF1:
+			pop_af();
 			break;
 		case 0xF2:
 			break;
@@ -1228,24 +1408,30 @@ void GBCPU::execute(){
 		case 0xF4:
 			runnable = false;
 			break;
-		//TODO push af
 		case 0xF5:
+			push_af();
 			break;
-		//TODO OR imm_8
 		case 0xF6:
+			_a = _a | mem->read(_pc);
+			zf = _a;
+			hf = nf = cf = 0;
+			_pc++;
+			ticks+=4;
 			break;
 		case 0xF7:
 			rst(0x30);
 			break;
 		//TODO LD hl, sp+imm_8
 		case 0xF8:
+			
 			break;
 		case 0xF9:
 			_sp = _hl;
 			ticks+=4;
 			break;
-		//TODO LD A, (imm_16)
 		case 0xFA:
+			reg_load_a(_pc);
+			ticks+=12;
 			break;
 		case 0xFB:
 			interrupts = true;
@@ -1253,8 +1439,10 @@ void GBCPU::execute(){
 		case 0xFD:
 			runnable = false;
 			break;
-		//TODO cp imm_8
 		case 0xFE:
+			cmp_imm(mem->read(_pc);
+			_pc++;
+			ticks+=4;
 			break;
 		case 0xFF:
 			rst(0x38);

@@ -1,5 +1,6 @@
 #include "memory.hpp"
-
+//TODO clean this up a bit, theres a small amount of duplication that could be cleaned up a little nicer
+//TODO determine best place to put clock tick incrementation
 #ifndef _GBCPU_H_
 #define _GBCPU_H_ 1
 
@@ -7,6 +8,7 @@ namespace gbemu{
 #define _bc ((_b << 8) + _c)
 #define _de ((_d << 8) + _e)
 #define _hl ((_h << 8) + _l)
+#define IMM_16_PC ((mem->read(_pc) << 8) | (mem->read(_pc+1)))
 class GBCPU{
 public:
 	GBCPU(char *f): _pc(0x100) { mem = new GBMEM(f); }
@@ -76,6 +78,13 @@ private:
 		_a = zf = res & 0xFF;
 		nf = 0;
 	}
+	inline void add_a_imm_mem(unsigned short, bool carry){
+		unsigned char reg = mem->read(addr);
+		reg_a_add_u8(reg, carry);
+		mem->write(addr, reg);
+		_pc++;
+		ticks += 4;
+	}
 	inline void reg_a_sub_u8(unsigned char& reg, bool carry){
 		//TODO check flag setting logic...
 		unsigned short res;
@@ -85,6 +94,13 @@ private:
 		cf = !((reg & 0x100) == 0x100);
 		_a = zf = res & 0xFF;
 		nf = 1;
+	}
+	inline void sub_a_imm_mem(unsigned short addr, bool carry){
+		unsigned char reg = mem->read(addr);
+		reg_a_sub_u8(reg, carry);
+		mem->write(addr, reg);
+		_pc++;
+		ticks+= 4;
 	}
 	inline void reg_a_and_u8(unsigned char& reg){
 		_a &= reg;
@@ -123,9 +139,30 @@ private:
 		_sp += 2;
 		ticks += 8;
 	}
+	inline void pop_af(){
+		unsigned char f;
+		_a = mem->read(_sp);
+		f = mem->read(_sp+1);
+		zf = !(f & 0x80);
+		nf = f & 0x40;
+		hf = f & 0x20;
+		cf = f & 0x10;
+		_sp += 2;
+		ticks += 8;
+	}
 	inline void push(unsigned char& regl, unsigned char &regh){
 		mem->write(_sp-1, regh);
 		mem->write(_sp-2, regl);
+		_sp -= 2;
+		ticks += 12;
+	}
+	inline void push_af(){
+		unsigned char f = (!zf << 8) | 
+				(!!nf << 7)  |
+				(!!hf << 6)  |
+				(!!cf << 5)  & 0xF0;
+		mem->write(_sp-1, _a);
+		mem->write(_sp-2, f);
 		_sp -= 2;
 		ticks += 12;
 	}
@@ -150,6 +187,9 @@ private:
 		cf = !((reg & 0x100) == 0x100);
 		zf = res & 0xFF;
 		nf = 1;
+	}
+	inline void cmp_imm(unsigned char val){
+		reg_a_cmp_u8(val);
 	}
 	inline void reg_add_u16(unsigned char& high_s, unsigned char &low_s, unsigned int v){
 		hf = (low_s & 0x0F + (v & 0xF)) & 0x10;
@@ -181,6 +221,16 @@ private:
 			_pc+= 2;
 			ticks += 4;
 		}
+	}
+	inline void call(unsigned int flag, unsigned short addr){
+		if(flag){
+			mem->write(_sp-1, (_pc & 0xFF00) >> 8);
+			mem->write(_sp-2, (_pc & 0x00FF));
+			_sp -= 2;
+			_pc = addr;
+			ticks += 20;
+		} else { _pc += 2;
+			ticks += 8; }
 	}
 	inline void rst(unsigned char val){
 		mem->write(_sp-1, (_pc & 0xFF00) >> 8);
@@ -227,8 +277,6 @@ private:
 	inline void write_sp(unsigned short sp_n){
 		_sp = sp_n;
 	}
-	inline void reg_and(unsigned char& reg){
-	}
 	inline void reg_load_u16(unsigned char& high, unsigned char &low, 
 			unsigned char &mhigh, unsigned char &mlow){
 		high = mhigh;
@@ -236,6 +284,12 @@ private:
 	}	
 	inline void reg_load(unsigned char& dest, unsigned char &val){
 		dest = val;
+	}
+	inline void reg_load_a(unsigned short addr){
+		_a = mem->read(addr);
+	}
+	inline void reg_store_mem(unsigned short addr){
+		mem->write(addr, _a);
 	}
 	//CB Opcodes (extended instructions)
 	//swap register (8 cycles)
@@ -245,6 +299,11 @@ private:
 		reg = (((reg & 0x0F) << 4) | ((reg & 0xF0) >> 4));
 		nf = hf = cf = 0x0;
 		zf = reg;
+	}
+	inline void swap(unsigned short addr){
+		unsigned short reg = mem->read(addr);
+		swap(reg);
+		mem->write(addr, reg);
 	}
 	inline void set(unsigned char mask, unsigned char &reg){
 		reg |= mask;
@@ -259,13 +318,95 @@ private:
 		zf = reg;
 		hf = nf = 0;
 	}
+	inline void rlc_mem(unsigned short addr){
+		unsigned char reg = mem->read(addr);
+		cf = reg << 1;
+		reg = cf & 0xFF;
+		cf = cf &= 0x100;
+		zf = reg;
+		hf = nf = 0;
+		mem->write(addr, reg);
+		ticks+=8;
+	}
 	inline void rl(unsigned char& reg){
 		cf = (reg << 1) | !!cf;
 		zf = reg = cf & 0xFF;
 		cf = cf & 0x100;
 		hf = nf = 0;
 	}
-
+	inline void rl_mem(unsigned short addr){
+		unsigned char reg = mem->read(addr);
+		cf = (reg << 1) | !!cf;
+		zf = reg = cf & 0xFF;
+		cf = cf & 0x100;
+		hf = nf = 0;
+		mem->write(addr, reg);
+		ticks+=8;
+	}
+	inline void rrc(unsigned char& reg){
+		cf = reg & 0x1;
+		reg = reg >> 1;
+		zf = reg;
+		nf = hf = 0;
+	}
+	inline void rrc_mem(unsigned short addr){
+		unsigned char reg = mem->read(addr);
+		cf = reg & 0x1;
+		reg = reg >> 1;
+		zf = reg;
+		hf = nf = 0;
+		mem->write(addr, reg);
+		ticks += 8;
+	}
+	inline void rr(unsigned char& reg){
+		unsigned char ocf = !!cf;
+		cf = reg & 0x01;
+		zf = reg = (reg >> 1) | ((ocf << 8) & 0xFF);
+		hf = nf = 0;
+	}
+	inline void rr_mem(unsigned short addr){
+		unsigned char reg = mem->read(addr);
+		unsigned char ocf = !!cf;
+		cf = reg & 0x01;
+		zf = reg = (reg >> 1) | ((ocf << 8) & 0xFF);
+		hf = nf = 0;
+		mem->write(addr, reg);
+		ticks+=8;
+	}
+	inline void sla(unsigned char &reg){
+		cf = reg << 1;
+		zf = reg = cf & 0xFE;
+		cf &= 0x100;
+		hf = nf = 0;
+	}
+	inline void sla(unsigned short addr){
+		unsigned char reg = mem->read(addr);
+		sla(reg);
+		mem->write(addr, reg);
+	}
+	inline void sra(unsigned char& reg){
+		cf = reg & 0x01;
+		reg = reg >> 1;
+		zf = reg = reg | ((reg & 0x40) << 1);
+		hf = nf = 0;
+	}
+	inline void sra(unsigned short addr){
+		unsigned char reg = mem->read(addr);
+		sra(reg);
+		mem->write(addr, reg);
+		ticks+=8;
+	}
+	inline void srl(unsigned char& reg){
+		cf = reg & 0x01;
+		zf = reg = (reg >> 1) & 0x7F;
+		hf = nf = 0;
+	}
+	inline void srl(unsigned short addr){
+		unsigned char reg = mem->read(addr);
+		srl(reg);
+		mem->write(addr, reg);
+		ticks += 8;
+	}
 };
 	
 }
