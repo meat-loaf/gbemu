@@ -1,3 +1,4 @@
+#include <iostream>
 #include "memory.hpp"
 //TODO clean this up a bit, theres a small amount of duplication that could be cleaned up a little nicer
 //TODO determine best place to put clock tick incrementation
@@ -18,6 +19,7 @@ public:
 	}
 	GBMEM *mem;
 	void dbg_dump();
+	unsigned short pc(){ return _pc; }
 private:
 	unsigned char _a, _b, _c, _d, _e, _h, _l; //f is flags!
 	unsigned int ticks;
@@ -32,6 +34,10 @@ private:
 	//following are used for opcodes
 	bool runnable = true;
 	bool interrupts = true;
+	bool halted = false;
+	inline void check_interrupts(){
+		;
+	}
 	//flags aren't effected on 16-bit opcodes...
 	//stack var used incase low reg overflows
 	//TODO check validity
@@ -166,7 +172,7 @@ private:
 		_sp -= 2;
 		ticks += 12;
 	}
-	inline void ldh_into_mem(){
+/*	inline void ldh_into_mem(){
 		mem->write(0xFF00 + mem->read(_pc), _a);
 		_pc+=1;
 		ticks+=8;
@@ -175,6 +181,13 @@ private:
 		_a = (mem->read(_pc) & 0xFF) + 0xFF00;
 		_pc+=1;
 		ticks+=8;
+	}
+*/
+	inline void ldh_into_a(unsigned char& offset){
+		_a = mem->read(static_cast<unsigned short>(0xFF00 + offset));
+	}
+	inline void ldh_into_mem(unsigned char& offset){
+		mem->write(static_cast<unsigned short>(0xFF00 + offset), _a);
 	}
 	//really just a subtraction that sets flags...
 	//TODO maybe make sub and this the same?
@@ -197,6 +210,20 @@ private:
 		high_s = (cf & 0xFF00) >> 8;
 		low_s = (cf & 0x00FF);
 		nf = 0;
+	}
+	inline void add_signed_sp(bool which){
+		//TODO check flag setting (invert on subtraction?)
+		signed char val = static_cast<signed char>(mem->read(_pc));
+		cf =  ((_sp & 0x100) == 0x100);
+		hf = (_sp & 0x10) == 0x10;
+		if(which)
+			_sp += val;
+		else {
+			unsigned short v = _sp + val;
+			_h = _sp & (0xFF00 >> 8);
+			_l = _sp & 0x00FF;
+		}
+		hf = nf = 0;
 	}
 	inline void write_a_to_mem(unsigned char &high, unsigned char &low){
 		mem->write((high & 0xFF) << 8 | (low & 0xFF), _a);
@@ -308,8 +335,26 @@ private:
 	inline void set(unsigned char mask, unsigned char &reg){
 		reg |= mask;
 	}
+	inline void set(unsigned char mask, unsigned short addr){
+		unsigned char reg = mem->read(addr);
+		set(mask, reg);
+	}
 	inline void reset(unsigned char mask, unsigned char &reg){
 		reg &= mask;
+	}
+	inline void reset(unsigned char mask, unsigned short addr){
+		unsigned char reg = mem->read(addr);
+		reset(mask, reg);
+	}
+	inline void bit(unsigned char& reg, unsigned char num){
+		zf = reg & (0x1 << num);
+		hf = nf = 0;	
+	}
+	inline void bit(unsigned short addr, unsigned char num){
+		unsigned char reg = mem->read(addr);
+		bit(reg, num);
+		_pc++;
+		ticks += 8; 
 	}
 	inline void rlc(unsigned char& reg){
 		cf = reg << 1;

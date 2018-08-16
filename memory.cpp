@@ -73,6 +73,7 @@ namespace gbemu{
 		}
 	}
 	void GBMEM::write(unsigned short addr, unsigned char byte){
+		std::cout << "writing to " << std::hex << (unsigned int)addr << "\n";
 		//write == perform a bank switch
 		if (addr < 0x8000){
 			cartridge->write(addr, byte);

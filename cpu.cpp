@@ -1,11 +1,14 @@
 #include "cpu.hpp"
 #include <iostream>
-
+#include <iomanip>
 //TODO better undefined opcode handling so it isnt the same as STOP
 //throw exception?
 namespace gbemu{
 void GBCPU::execute(){
+	check_interrupts();
+	if (halted) goto skip;
 	unsigned char opcode = mem->read(_pc);
+	std::cout << std::hex << "OPCODE " << (unsigned int)opcode << "\n";
 	_pc++; ticks+=4;
 	switch(opcode){
 		case 0x0:
@@ -129,7 +132,8 @@ void GBCPU::execute(){
 			_pc+=1;
 			break;
 		case 0x21:
-			reg_load_u16(_h, _l, mem->read(_pc), mem->read(_pc+1));
+			std::cout << "LD HL, d16\n";
+			reg_load_u16(_h, _l, mem->read(_pc+1), mem->read(_pc));
 			_pc+=2;
 			ticks+=8;
 			break;
@@ -194,7 +198,7 @@ void GBCPU::execute(){
 			break;
 		case 0x32:
 			mem->write(_hl, _a);
-			inc_u16(_h, _l);
+			dec_u16(_h, _l);
 			break;
 		case 0x33:
 			_sp = _sp+1 & 0xFFFF;
@@ -417,6 +421,7 @@ void GBCPU::execute(){
 			break;
 		//TODO HALT
 		case 0x76:
+			halted = true;
 			break;
 		case 0x77:
 			mem->write(_hl, _a);
@@ -872,6 +877,206 @@ void GBCPU::execute(){
 				case 0x3F:
 					srl(_a);
 					break;
+				case 0x40:
+					bit(_b, 0);
+					break;	
+				case 0x41:
+					bit(_c, 0);
+					break;	
+				case 0x42:
+					bit(_d, 0);
+					break;	
+				case 0x43:
+					bit(_e, 0);
+					break;	
+				case 0x44:
+					bit(_h, 0);
+					break;	
+				case 0x45:
+					bit(_l, 0);
+					break;	
+				case 0x46:
+					bit(_hl, 0);
+					ticks+=8;
+					break;	
+				case 0x47:
+					bit(_a, 0);
+					break;	
+				case 0x48:
+					bit(_b, 1);
+					break;	
+				case 0x49:
+					bit(_c, 1);
+					break;	
+				case 0x4A:
+					bit(_d, 1);
+					break;	
+				case 0x4B:
+					bit(_e, 1);
+					break;	
+				case 0x4C:
+					bit(_h, 1);
+					break;	
+				case 0x4D:
+					bit(_l, 1);
+					break;	
+				case 0x4E:
+					bit(_hl, 1);
+					ticks+=8;
+					break;	
+				case 0x4F:
+					bit(_a, 1);
+					break;
+				case 0x50:
+					bit(_b, 2);
+					break;	
+				case 0x51:
+					bit(_c, 2);
+					break;	
+				case 0x52:
+					bit(_d, 2);
+					break;	
+				case 0x53:
+					bit(_e, 2);
+					break;	
+				case 0x54:
+					bit(_h, 2);
+					break;	
+				case 0x55:
+					bit(_l, 2);
+					break;	
+				case 0x56:
+					bit(_hl, 2);
+					ticks+=8;
+					break;	
+				case 0x57:
+					bit(_a, 2);
+					break;	
+				case 0x58:
+					bit(_b, 3);
+					break;	
+				case 0x59:
+					bit(_c, 3);
+					break;	
+				case 0x5A:
+					bit(_d, 3);
+					break;	
+				case 0x5B:
+					bit(_e, 3);
+					break;	
+				case 0x5C:
+					bit(_h, 3);
+					break;	
+				case 0x5D:
+					bit(_l, 3);
+					break;	
+				case 0x5E:
+					bit(_hl, 3);
+					ticks+=8;
+					break;	
+				case 0x5F:
+					bit(_a, 3);
+					break;
+				case 0x60:
+					bit(_b, 4);
+					break;	
+				case 0x61:
+					bit(_c, 4);
+					break;	
+				case 0x62:
+					bit(_d, 4);
+					break;	
+				case 0x63:
+					bit(_e, 4);
+					break;	
+				case 0x64:
+					bit(_h, 4);
+					break;	
+				case 0x65:
+					bit(_l, 4);
+					break;	
+				case 0x66:
+					bit(_hl, 4);
+					ticks+=8;
+					break;	
+				case 0x67:
+					bit(_a, 4);
+					break;	
+				case 0x68:
+					bit(_b, 5);
+					break;	
+				case 0x69:
+					bit(_c, 5);
+					break;	
+				case 0x6A:
+					bit(_d, 5);
+					break;	
+				case 0x6B:
+					bit(_e, 5);
+					break;	
+				case 0x6C:
+					bit(_h, 5);
+					break;	
+				case 0x6D:
+					bit(_l, 5);
+					break;	
+				case 0x6E:
+					bit(_hl, 5);
+					ticks+=8;
+					break;	
+				case 0x6F:
+					bit(_a, 5);
+					break;	
+				case 0x70:
+					bit(_b, 6);
+					break;	
+				case 0x71:
+					bit(_c, 6);
+					break;	
+				case 0x72:
+					bit(_d, 6);
+					break;	
+				case 0x73:
+					bit(_e, 6);
+					break;	
+				case 0x74:
+					bit(_h, 6);
+					break;	
+				case 0x75:
+					bit(_l, 6);
+					break;	
+				case 0x76:
+					bit(_hl, 6);
+					ticks+=8;
+					break;	
+				case 0x77:
+					bit(_a, 6);
+					break;	
+				case 0x78:
+					bit(_b, 7);
+					break;	
+				case 0x79:
+					bit(_c, 7);
+					break;	
+				case 0x7A:
+					bit(_d, 7);
+					break;	
+				case 0x7B:
+					bit(_e, 7);
+					break;	
+				case 0x7C:
+					bit(_h, 7);
+					break;	
+				case 0x7D:
+					bit(_l, 7);
+					break;	
+				case 0x7E:
+					bit(_hl, 7);
+					ticks+=8;
+					break;	
+				case 0x7F:
+					bit(_a, 7);
+					break;	
 				case 0x80:
 					reset(0xFE, _b);
 					break;
@@ -891,8 +1096,7 @@ void GBCPU::execute(){
 					reset(0xFE, _l);
 					break;
 				case 0x86:
-					//TODO FIX
-					reset(0xFE, mem->read(_hl));
+					reset(0xFE, _hl);
 					ticks+=4;
 					break;
 				case 0x87:
@@ -917,8 +1121,7 @@ void GBCPU::execute(){
 					reset(0xFD, _l);
 					break;
 				case 0x8E:
-					//TODO FIX
-					reset(0xFD, mem->read(_hl));
+					set(0xFD, _hl);
 					ticks+=4;
 					break;
 				case 0x8F:
@@ -943,8 +1146,7 @@ void GBCPU::execute(){
 					reset(0xFB, _l);
 					break;
 				case 0x96:
-					//TODO FIX
-					reset(0xFB, mem->read(_hl));
+					reset(0xFB, _hl);
 					ticks+=4;
 					break;
 				case 0x97:
@@ -969,8 +1171,7 @@ void GBCPU::execute(){
 					reset(0xF7, _l);
 					break;
 				case 0x9E:
-					//TODO FIX
-					reset(0xF7, mem->read(_hl));
+					reset(0xF7, _hl);
 					ticks+=4;
 					break;
 				case 0x9F:
@@ -995,7 +1196,7 @@ void GBCPU::execute(){
 					reset(0xEF, _l);
 					break;
 				case 0xA6:
-					reset(0xEF, mem->read(_hl));
+					reset(0xEF,_hl);
 					ticks+=4;
 					break;
 				case 0xA7:
@@ -1020,7 +1221,7 @@ void GBCPU::execute(){
 					reset(0xDF, _l);
 					break;
 				case 0xAE:
-					reset(0xDF, mem->read(_hl));
+					reset(0xDF, _hl);
 					ticks+=4;
 					break;
 				case 0xAF:
@@ -1045,7 +1246,7 @@ void GBCPU::execute(){
 					reset(0xBF, _l);
 					break;
 				case 0xB6:
-					reset(0xBF, mem->read(_hl));
+					reset(0xBF, _hl);
 					ticks+=4;
 					break;
 				case 0xB7:
@@ -1070,7 +1271,7 @@ void GBCPU::execute(){
 					reset(0x7F, _l);
 					break;
 				case 0xBE:
-					reset(0x7F, mem->read(_hl));
+					reset(0x7F, _hl);
 					ticks+=4;
 					break;
 				case 0xBF:
@@ -1095,7 +1296,7 @@ void GBCPU::execute(){
 					set(0x01, _l);
 					break;
 				case 0xC6:
-					set(0x01, mem->read(_hl));
+					set(0x01, _hl);
 					ticks+=4;
 					break;
 				case 0xC7:
@@ -1120,7 +1321,7 @@ void GBCPU::execute(){
 					set(0x02, _l);
 					break;
 				case 0xCE:
-					set(0x02, mem->read(_hl));
+					set(0x02, _hl);
 					ticks+=4;
 					break;
 				case 0xCF:
@@ -1145,7 +1346,7 @@ void GBCPU::execute(){
 					set(0x04, _l);
 					break;
 				case 0xD6:
-					set(0x04, mem->read(_hl));
+					set(0x04, _hl);
 					ticks+=4;
 					break;
 				case 0xD7:
@@ -1170,7 +1371,7 @@ void GBCPU::execute(){
 					set(0x08, _l);
 					break;
 				case 0xDE:
-					set(0x08, mem->read(_hl));
+					set(0x08, _hl);
 					ticks+=4;
 					break;
 				case 0xDF:
@@ -1195,7 +1396,7 @@ void GBCPU::execute(){
 					set(0x10, _l);
 					break;
 				case 0xE6:
-					set(0x10, mem->read(_hl));
+					set(0x10, _hl);
 					ticks+=4;
 					break;
 				case 0xE7:
@@ -1220,7 +1421,7 @@ void GBCPU::execute(){
 					set(0x20, _l);
 					break;
 				case 0xEE:
-					set(0x20, mem->read(_hl));
+					set(0x20, _hl);
 					ticks+=4;
 					break;
 				case 0xEF:
@@ -1245,7 +1446,7 @@ void GBCPU::execute(){
 					set(0x40, _l);
 					break;
 				case 0xF6:
-					set(0x40, mem->read(_hl));
+					set(0x40, _hl);
 					ticks+=4;
 					break;
 				case 0xF7:
@@ -1270,7 +1471,7 @@ void GBCPU::execute(){
 					set(0x80, _l);
 					break;
 				case 0xFE:
-					set(0x80, mem->read(_hl));
+					set(0x80, _hl);
 					ticks+=4;
 					break;
 				case 0xFF:
@@ -1341,13 +1542,16 @@ void GBCPU::execute(){
 			rst(0x18);
 			break;
 		case 0xE0:
-			ldh_into_mem();
+			ldh_into_mem(mem->read(_pc));
+			_pc += 1;
+			ticks += 8;
 			break;
 		case 0xE1:
 			pop(_h, _l);
 			break;
-		//TODO LD (C), A
 		case 0xE2:
+			ldh_into_mem(_c);
+			ticks += 4;
 			break;
 		case 0xE3:
 		case 0xE4:
@@ -1368,10 +1572,10 @@ void GBCPU::execute(){
 			rst(0x20);
 			break;
 		case 0xE8:
-			/*reg_add_u16(_sp, mem->read(_pc));
+			add_signed_sp(true);
 			_pc++;
-			ticks+=8;
-			break;*/
+			ticks+=12;
+			break;
 		case 0xE9:
 			_pc = _hl;
 			break;
@@ -1395,12 +1599,16 @@ void GBCPU::execute(){
 			rst(0x28);
 			break;
 		case 0xF0:
-			ldh_into_a();
+			ldh_into_a(mem->read(_pc));
+			_pc++;
+			ticks += 8;
 			break;
 		case 0xF1:
 			pop_af();
 			break;
 		case 0xF2:
+			ldh_into_a(_c);
+			ticks += 4;
 			break;
 		case 0xF3:
 			interrupts = false;
@@ -1421,9 +1629,10 @@ void GBCPU::execute(){
 		case 0xF7:
 			rst(0x30);
 			break;
-		//TODO LD hl, sp+imm_8
 		case 0xF8:
-			
+			add_signed_sp(false);	
+			_pc++;
+			ticks += 8;
 			break;
 		case 0xF9:
 			_sp = _hl;
@@ -1433,6 +1642,7 @@ void GBCPU::execute(){
 			reg_load_a(_pc);
 			ticks+=12;
 			break;
+		//TODO bug: EI doesn't enable until end of following instr
 		case 0xFB:
 			interrupts = true;
 		case 0xFC:
@@ -1448,20 +1658,23 @@ void GBCPU::execute(){
 			rst(0x38);
 			break;
 	}	
+skip:
+	return;
 }
 void GBCPU::dbg_dump(){
-	std::cerr << std::hex
-	<< "a " << _a << "\n"
-	<< "b " << _b << "\n"
-	<< "c " << _c << "\n"
-	<< "d " << _d << "\n"
-	<< "e " << _e << "\n"
-	<< "h " << _h << "\n"
-	<< "l " << _l << "\n"
-	<< "pc " << _pc << "\n"
-	<< "sp " << _sp << std::endl;
+	std::cout << std::hex << std::setfill('0') << std::setw(2)
+	<< "a " << (unsigned int)_a << "\n"
+	<< "b " << (unsigned int)_b << "\n"
+	<< "c " << (unsigned int)_c << "\n"
+	<< "d " << (unsigned int)_d << "\n"
+	<< "e " << (unsigned int)_e << "\n"
+	<< "h " << (unsigned int)_h << "\n"
+	<< "l " << (unsigned int)_l << "\n"
+	<< "pc " << (unsigned int)_pc << "\n"
+	<< "sp " << (unsigned int)_sp << "\n"
+	<< "zf " << !zf << " nf " << !!nf << " hf " << !!hf << " cf " << !!cf
+	<< std::endl;
 }
 
 }
-
 
