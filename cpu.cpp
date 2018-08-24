@@ -6,7 +6,7 @@
 namespace gbemu{
 void GBCPU::execute(){
 	check_interrupts();
-	if (halted) goto skip;
+	if (!halted){
 	unsigned char opcode = mem->read(_pc);
 	std::cout << std::hex << "OPCODE " << (unsigned int)opcode << "\n";
 	_pc++; ticks+=4;
@@ -1657,9 +1657,8 @@ void GBCPU::execute(){
 		case 0xFF:
 			rst(0x38);
 			break;
-	}	
-skip:
-	return;
+	}//end switch
+	}//end if (!halted)	
 }
 void GBCPU::dbg_dump(){
 	std::cout << std::hex << std::setfill('0') << std::setw(2)
