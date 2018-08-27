@@ -1,5 +1,6 @@
 #include <iostream>
 #include "memory.hpp"
+#include "lcd.hpp"
 //TODO clean this up a bit, theres a small amount of duplication that could be cleaned up a little nicer
 //TODO determine best place to put clock tick incrementation
 #ifndef _GBCPU_H_
@@ -10,14 +11,19 @@ namespace gbemu{
 #define _de ((_d << 8) + _e)
 #define _hl ((_h << 8) + _l)
 #define IMM_16_PC ((mem->read(_pc) << 8) | (mem->read(_pc+1)))
+#define HALF_BORROW(x, y) (((x) & 0x0F) < ((y) & 0x0F))
+#define BORROW(x, y) ((x) < (y))
+#define HALF_CARRY(x, y) (((x) & 0x0F) + ((y) & 0x0F) > 0x0F)
+#define CARRY(x, y) (static_cast<unsigned int>((x)) + static_cast<unsigned int>((y)))
 class GBCPU{
 public:
-	GBCPU(char *f): _pc(0x100) { mem = new GBMEM(f); }
+	GBCPU(char *f): _pc(0x100) { mem = new GBMEM(f); lcd = new GBLCD();}
 	void execute();
 	unsigned char gname(){
 		return mem->read(0x134);
 	}
 	GBMEM *mem;
+	GBLCD *lcd;
 	void dbg_dump();
 	unsigned short pc(){ return _pc; }
 private:
@@ -52,27 +58,23 @@ private:
 		high = high + ((li >> 8) & 1) & 0xFF;	
 	}
 	inline void inc_u8(unsigned char &reg){
-		hf = reg & 0x0F;
+		hf = HALF_CARRY(reg, 1);
 		reg = zf = reg+1;
 		nf = 0;
 	}
 	inline void inc_u8_mem(unsigned short dest){
-		unsigned char b = mem->read(dest);
-		hf = ((b & 0x10) == 0x10);
-		zf = b+1;
-		nf = 0;
-		mem->write(dest, zf & 0xFF);
+		unsigned char reg = mem->read(dest);
+		inc_u8(reg);
+		mem->write(dest, reg);
 	}
 	inline void dec_u8(unsigned char &reg){
-		hf = ((reg & 0x10) == 0x10);
+		hf = HALF_BORROW(reg, 1);
 		reg = zf = reg-1;
 		nf = 1;
 	}
 	inline void dec_u8_mem(unsigned short dest){
-		unsigned char b = mem->read(dest);
-		hf = ((b & 0x10) == 0x10);
-		zf = b-1;
-		nf = 1;
+		unsigned char reg = mem->read(dest);
+		dec_u8(reg);
 		mem->write(dest, zf & 0xFF);
 	}
 	inline void reg_a_add_u8(unsigned char& reg, bool carry){
