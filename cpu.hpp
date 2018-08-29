@@ -1,8 +1,9 @@
 #include <iostream>
 #include "memory.hpp"
 #include "lcd.hpp"
+#include "defs.hpp"
+
 //TODO clean this up a bit, theres a small amount of duplication that could be cleaned up a little nicer
-//TODO determine best place to put clock tick incrementation
 #ifndef _GBCPU_H_
 #define _GBCPU_H_ 1
 
@@ -10,25 +11,27 @@ namespace gbemu{
 #define _bc ((_b << 8) + _c)
 #define _de ((_d << 8) + _e)
 #define _hl ((_h << 8) + _l)
-#define IMM_16_PC ((mem->read(_pc) << 8) | (mem->read(_pc+1)))
+#define IMM_16_PC ((mem->read(_pc) << 8) + (mem->read(_pc+1)))
 #define HALF_BORROW(x, y) (((x) & 0x0F) < ((y) & 0x0F))
 #define BORROW(x, y) ((x) < (y))
 #define HALF_CARRY(x, y) (((x) & 0x0F) + ((y) & 0x0F) > 0x0F)
-#define CARRY(x, y) (static_cast<unsigned int>((x)) + static_cast<unsigned int>((y)))
+#define CARRY(x, y) (static_cast<unsigned int>((x)) + static_cast<unsigned int>((y)) > 0xFF)
 class GBCPU{
 public:
-	GBCPU(char *f): _pc(0x100) { mem = new GBMEM(f); lcd = new GBLCD();}
-	void execute();
-	unsigned char gname(){
-		return mem->read(0x134);
-	}
-	GBMEM *mem;
-	GBLCD *lcd;
+	GBCPU(char *f): _pc(0x100), cycles(0) { mem = new GBMEM(f); lcd = new GBLCD(mem);}
+	~GBCPU(){ delete mem; delete lcd; }
+	void update();
+	void opcode_exec();
 	void dbg_dump();
+	void do_interrupts();
+	void timer_upd();
+	void gfx_upd(){}
 	unsigned short pc(){ return _pc; }
 private:
+	GBMEM *mem;
+	GBLCD *lcd;
 	unsigned char _a, _b, _c, _d, _e, _h, _l; //f is flags!
-	unsigned int ticks;
+	unsigned int cycles;
 	unsigned short _pc, _sp;
 	//zero flag stored as complement by operations,
 	//so we check for !zf to determine if set
@@ -91,7 +94,7 @@ private:
 		reg_a_add_u8(reg, carry);
 		mem->write(addr, reg);
 		_pc++;
-		ticks += 4;
+		cycles += 4;
 	}
 	inline void reg_a_sub_u8(unsigned char& reg, bool carry){
 		//TODO check flag setting logic...
@@ -108,7 +111,7 @@ private:
 		reg_a_sub_u8(reg, carry);
 		mem->write(addr, reg);
 		_pc++;
-		ticks+= 4;
+		cycles+= 4;
 	}
 	inline void reg_a_and_u8(unsigned char& reg){
 		_a &= reg;
@@ -135,17 +138,17 @@ private:
 		if(ifjmp){
 			_pc = (mem->read(_sp) << 8 & mem->read(_sp+1));
 			_sp += 2;
-			ticks+=16;
+			cycles+=16;
 		} else {
 			_pc += 1;
-			ticks+=4;
+			cycles+=4;
 		}
 	}
 	inline void pop(unsigned char& regl, unsigned char &regh){
 		regl = mem->read(_sp);
 		regh = mem->read(_sp+1);
 		_sp += 2;
-		ticks += 8;
+		cycles += 8;
 	}
 	inline void pop_af(){
 		unsigned char f;
@@ -156,13 +159,13 @@ private:
 		hf = f & 0x20;
 		cf = f & 0x10;
 		_sp += 2;
-		ticks += 8;
+		cycles += 8;
 	}
 	inline void push(unsigned char& regl, unsigned char &regh){
 		mem->write(_sp-1, regh);
 		mem->write(_sp-2, regl);
 		_sp -= 2;
-		ticks += 12;
+		cycles += 12;
 	}
 	inline void push_af(){
 		unsigned char f =((!zf << 8) | 
@@ -172,17 +175,17 @@ private:
 		mem->write(_sp-1, _a);
 		mem->write(_sp-2, f);
 		_sp -= 2;
-		ticks += 12;
+		cycles += 12;
 	}
 /*	inline void ldh_into_mem(){
 		mem->write(0xFF00 + mem->read(_pc), _a);
 		_pc+=1;
-		ticks+=8;
+		cycles+=8;
 	}
 	inline void ldh_into_a(){
 		_a = (mem->read(_pc) & 0xFF) + 0xFF00;
 		_pc+=1;
-		ticks+=8;
+		cycles+=8;
 	}
 */
 	inline void ldh_into_a(unsigned char& offset){
@@ -236,19 +239,19 @@ private:
 	inline void cond_jmp_rel(unsigned int flag, signed char off){
 		if (flag){
 			_pc += off;
-			ticks += 8;
+			cycles += 8;
 		} else {
 			_pc += 1;
-			ticks += 4;
+			cycles += 4;
 		}
 	}
 	inline void cond_jmp_abs(unsigned int flag){
 		if (flag){
 			_pc = (mem->read(_pc) + (mem->read(_pc+1) >> 8));
-			ticks += 12;
+			cycles += 12;
 		} else {
 			_pc+= 2;
-			ticks += 4;
+			cycles += 4;
 		}
 	}
 	inline void call(unsigned int flag, unsigned short addr){
@@ -257,15 +260,15 @@ private:
 			mem->write(_sp-2, (_pc & 0x00FF));
 			_sp -= 2;
 			_pc = addr;
-			ticks += 20;
+			cycles += 20;
 		} else { _pc += 2;
-			ticks += 8; }
+			cycles += 8; }
 	}
 	inline void rst(unsigned char val){
 		mem->write(_sp-1, (_pc & 0xFF00) >> 8);
 		mem->write(_sp-2, (_pc & 0xFF));
 		_pc = 0x0000 | val;
-		ticks += 12;
+		cycles += 12;
 	};
 	//satan's opcode
 	inline void daa(){
@@ -356,7 +359,7 @@ private:
 		unsigned char reg = mem->read(addr);
 		bit(reg, num);
 		_pc++;
-		ticks += 8; 
+		cycles += 8; 
 	}
 	inline void rlc(unsigned char& reg){
 		cf = reg << 1;
@@ -373,7 +376,7 @@ private:
 		zf = reg;
 		hf = nf = 0;
 		mem->write(addr, reg);
-		ticks+=8;
+		cycles+=8;
 	}
 	inline void rl(unsigned char& reg){
 		cf = (reg << 1) | !!cf;
@@ -388,7 +391,7 @@ private:
 		cf = cf & 0x100;
 		hf = nf = 0;
 		mem->write(addr, reg);
-		ticks+=8;
+		cycles+=8;
 	}
 	inline void rrc(unsigned char& reg){
 		cf = reg & 0x1;
@@ -403,7 +406,7 @@ private:
 		zf = reg;
 		hf = nf = 0;
 		mem->write(addr, reg);
-		ticks += 8;
+		cycles += 8;
 	}
 	inline void rr(unsigned char& reg){
 		unsigned char ocf = !!cf;
@@ -418,7 +421,7 @@ private:
 		zf = reg = (reg >> 1) | ((ocf << 8) & 0xFF);
 		hf = nf = 0;
 		mem->write(addr, reg);
-		ticks+=8;
+		cycles+=8;
 	}
 	inline void sla(unsigned char &reg){
 		cf = reg << 1;
@@ -441,7 +444,7 @@ private:
 		unsigned char reg = mem->read(addr);
 		sra(reg);
 		mem->write(addr, reg);
-		ticks+=8;
+		cycles+=8;
 	}
 	inline void srl(unsigned char& reg){
 		cf = reg & 0x01;
@@ -452,7 +455,7 @@ private:
 		unsigned char reg = mem->read(addr);
 		srl(reg);
 		mem->write(addr, reg);
-		ticks += 8;
+		cycles += 8;
 	}
 };
 	

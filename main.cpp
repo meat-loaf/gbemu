@@ -21,18 +21,18 @@ int main(int argc, char** argv){
 		if (input == "dmp")
 			cpu_main.dbg_dump();
 		else if (input == "exec")
-			cpu_main.execute();
+			cpu_main.update();
 		else if (input == "cont"){
 			std::cout << "cont : breakpoint, nointerrupt (" << breakpoint << nointerrupt << ")\n"; 
 			if (breakpoint && nointerrupt){
 				std::cout << std::hex << "bp, cpu_main.pc() " << (unsigned int)bp << " " << (unsigned int)cpu_main.pc() << "\n";
 				while(bp >= cpu_main.pc()){
 					std::cout << "endless exec\n";
-					cpu_main.execute();
+					cpu_main.update();
 				}
 			nointerrupt = true;
 			}
-			else cpu_main.execute();	
+			else cpu_main.update();	
 		}
 		else if (input == "bp"){
 			breakpoint = true;

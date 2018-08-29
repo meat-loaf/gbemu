@@ -1,8 +1,6 @@
 #include "memory.hpp"
 #include <iostream>
 namespace gbemu{
-	//TODO can this be accomplished by allocing
-	//all memory at once and casting the struct over it?
 	GBMEM::GBMEM(char *f) : _memblob{
 				new unsigned char[0x1800],
 				new unsigned char[0x500],
@@ -73,6 +71,7 @@ namespace gbemu{
 		}
 	}
 	void GBMEM::write(unsigned short addr, unsigned char byte){
+		//TODO clean this up
 		std::cout << "writing to " << std::hex << (unsigned int)addr << "\n";
 		//write == perform a bank switch
 		if (addr < 0x8000){
@@ -100,7 +99,11 @@ namespace gbemu{
 		//need to check OAM writes; can only be written during v/hblank i think
 		//TODO restrictions on writing some registers, need to abstract the write
 		else if (addr > 0xFDFF){
-			_memblob.oam_hwio_zeroief[addr-0xFDFF] = byte;
+			if (addr > 0xFF00 & addr < 0xFF7F){
+				//lots of hw regs have different behavior on writes
+				write_hw_reg(addr, byte);
+			}
+			else _memblob.oam_hwio_zeroief[addr-0xFDFF] = byte;
 		}
 		//cart ram, if applicable
 		//TODO implement in cartridge class
