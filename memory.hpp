@@ -12,9 +12,10 @@ public:
 	~GBMEM();
 
 private:
+	//TODO actually implement behavior for mmio registers
 	void write_hw_reg(unsigned short addr, unsigned short val){
 		addr = addr - 0xFDFF;
-		
+		_memblob.oam_hwio_zeroief[addr] = val;
 	}
 	struct memblob {
 		unsigned char *chram;

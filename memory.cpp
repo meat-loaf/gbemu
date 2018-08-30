@@ -7,7 +7,7 @@ namespace gbemu{
 				new unsigned char[0x500],
 //				new unsigned char[0x1800],
 				new unsigned char[0x2000],
-				new unsigned char[0xA0+0x80+0x80],
+				new unsigned char[0x1FF],
 				}{ std::cerr << "memconst\n"; cartridge = new GBCART(f); } 
 	GBMEM::~GBMEM() {
 		delete[] _memblob.chram;
@@ -97,7 +97,6 @@ namespace gbemu{
 		}
 		//OAM/internal registers
 		//need to check OAM writes; can only be written during v/hblank i think
-		//TODO restrictions on writing some registers, need to abstract the write
 		else if (addr > 0xFDFF){
 			if (addr > 0xFF00 & addr < 0xFF7F){
 				//lots of hw regs have different behavior on writes

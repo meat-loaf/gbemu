@@ -18,7 +18,7 @@ namespace gbemu{
 #define CARRY(x, y) (static_cast<unsigned int>((x)) + static_cast<unsigned int>((y)) > 0xFF)
 class GBCPU{
 public:
-	GBCPU(char *f): ei_pending(false), _pc(0x100), _sp(0xFFFE), cycles(0) {
+	GBCPU(char *f): debug(true), ei_pending(false), _pc(0x100), _sp(0xFFFE), cycles(0) {
 		 mem = new GBMEM(f);
 		 lcd = new GBLCD(mem);
 	}
@@ -31,6 +31,7 @@ public:
 	void gfx_upd(){}
 	unsigned short pc(){ return _pc; }
 private:
+	bool debug;
 	bool ei_pending;
 	GBMEM *mem;
 	GBLCD *lcd;

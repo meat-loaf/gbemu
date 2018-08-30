@@ -8,14 +8,15 @@ namespace gbemu{
 //TODO later do per-scanline rendering
 void GBCPU::update(){
 	while (cycles < MAX_CYCLES){
+		if (debug) { dbg_dump(); }
 		opcode_exec();
 		timer_upd();
 //		gfx_upd();
-		if (interrupts)
-			do_interrupts();
+/*		if (interrupts)
+			do_interrupts();*/
 	}
 	cycles= 0;
-	lcd->render();
+//	lcd->render();
 }
 
 void GBCPU::timer_upd(){
