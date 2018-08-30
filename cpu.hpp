@@ -18,7 +18,10 @@ namespace gbemu{
 #define CARRY(x, y) (static_cast<unsigned int>((x)) + static_cast<unsigned int>((y)) > 0xFF)
 class GBCPU{
 public:
-	GBCPU(char *f): _pc(0x100), cycles(0) { mem = new GBMEM(f); lcd = new GBLCD(mem);}
+	GBCPU(char *f): ei_pending(false), _pc(0x100), _sp(0xFFFE), cycles(0) {
+		 mem = new GBMEM(f);
+		 lcd = new GBLCD(mem);
+	}
 	~GBCPU(){ delete mem; delete lcd; }
 	void update();
 	void opcode_exec();
@@ -28,6 +31,7 @@ public:
 	void gfx_upd(){}
 	unsigned short pc(){ return _pc; }
 private:
+	bool ei_pending;
 	GBMEM *mem;
 	GBLCD *lcd;
 	unsigned char _a, _b, _c, _d, _e, _h, _l; //f is flags!

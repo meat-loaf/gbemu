@@ -23,7 +23,7 @@ GBLCD::~GBLCD(){
 }
 void GBLCD::render(){
 	SDL_LockSurface(gb_screen);
-	SDL_memset(gb_screen->pixels, 0, gb_screen->h * gb_screen->pitch);
+	//SDL_memset(gb_screen->pixels, 0xF0, gb_screen->h * gb_screen->pitch);
 	SDL_UpdateWindowSurface(gb_mainwin);
 	SDL_UnlockSurface(gb_screen);
 }

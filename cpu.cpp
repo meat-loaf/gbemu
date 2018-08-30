@@ -5,12 +5,14 @@
 //throw exception?
 namespace gbemu{
 
+//TODO later do per-scanline rendering
 void GBCPU::update(){
 	while (cycles < MAX_CYCLES){
 		opcode_exec();
 		timer_upd();
-		gfx_upd();
-		do_interrupts();
+//		gfx_upd();
+		if (interrupts)
+			do_interrupts();
 	}
 	cycles= 0;
 	lcd->render();
@@ -20,8 +22,21 @@ void GBCPU::timer_upd(){
 }
 
 void GBCPU::do_interrupts(){
+	interrupts = false;
+	char int_f = mem->read(IRF);
+	//vblank
+	if (TEST_BIT(int_f, 0)){
+		call(VBLANK_VEC, true);
+	}
+	//TODO other interrupts
 }
 void GBCPU::opcode_exec(){
+	//if ei was exect last cycle we reenable interrupts here
+	//won't get checked until after instruction finishes exec
+	if (ei_pending) {
+		ei_pending = !ei_pending;
+		interrupts = true;
+	}
 	unsigned char opcode = mem->read(_pc);
 	std::cout << std::hex << "OPCODE " << (unsigned int)opcode << "\n";
 	_pc++; cycles+=4;
@@ -1659,7 +1674,8 @@ void GBCPU::opcode_exec(){
 			break;
 		//TODO bug: EI doesn't enable until end of following instr
 		case 0xFB:
-			interrupts = true;
+			ei_pending = true;
+			break;
 		case 0xFC:
 		case 0xFD:
 			runnable = false;
