@@ -10,6 +10,7 @@ public:
 	GBLCD(GBMEM*);
 	~GBLCD();
 	void render();
+	void draw(int, int, int, int);
 private:
 	GBMEM *mem;
 	SDL_Window* gb_mainwin;

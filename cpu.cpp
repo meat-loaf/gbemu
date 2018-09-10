@@ -12,8 +12,8 @@ void GBCPU::update(){
 		opcode_exec();
 		timer_upd();
 //		gfx_upd();
-/*		if (interrupts)
-			do_interrupts();*/
+		if (interrupts)
+			do_interrupts();
 	}
 	cycles= 0;
 //	lcd->render();

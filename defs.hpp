@@ -2,12 +2,26 @@
 #define _DEFS_H_ 1
 
 //hw registers
+
+//serial
+//8 bits of data to be transferred
+#define SDAT 0xFF01
+//bit 0: shift clock (0 ext, 1 int)
+//bit 1: clk speed (0 norm, 1 fast [cgb])
+//bit 7: transfer start flag (1 yes); reset by hw at end of transfer
+#define STXC 0xFF02
+
+//timer
 #define DIVR 0xFF04
 #define TIMA 0xFF05
 #define TMA 0xFF06
 #define TMC 0xFF07
+
+//interrupts
 //bit 0: vblank 1: LCD STAT 2: timer 3:serial 4:joypad
 #define IRF 0xFF0F
+
+//lcd
 //bit - LCD CONTROL REGISTER FLAG
 //7 - LCD Display Enable
 //6 - Window Tile Map Display Select (0 0x9800-0x9BFF, 1 0x9C00-0x9FFF)
@@ -18,7 +32,6 @@
 //1 - OBJ (Sprite) Display Enable
 //0 - BG Display
 #define LCD_CONTROL 0xFF40
-
 //bit - lcd status flags
 //0-1 mode flag: 0 hblank 1 vblank 2 oam/ram search, 3 data tx to lcd driver (RO)
 //2 coincidence flag (RO)
@@ -44,7 +57,9 @@
 #define MAX_CYCLES 69905
 
 #define TEST_BIT(v, b) ((v) & (0x01 << (b)))
-
 //interrupt vector addresses
 #define VBLANK_VEC 0x0040
+
+#define WIN_TMAP_LOWER 0x9800
+#define WIN_TMAP_UPPER 0x9C00 
 #endif
